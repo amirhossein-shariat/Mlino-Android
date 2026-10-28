@@ -29,6 +29,8 @@ data class UiState(
     val categories: List<CategoryE> = emptyList(),
     val monthIn: Long = 0,
     val monthOut: Long = 0,
+    val coreCards: List<Card> = emptyList(),
+    val coreTxs: List<Tx> = emptyList(),
 )
 
 class MainVm(app: Application) : AndroidViewModel(app) {
@@ -59,9 +61,25 @@ class MainVm(app: Application) : AndroidViewModel(app) {
             gaps = res.gaps.map { GapUi(it, byCard[it.cardId]?.name.orEmpty()) },
             attention = attention,
             categories = cats,
-            monthIn = mIn, monthOut = mOut,
+            monthIn = mIn, monthOut = mOut, coreCards = cards, coreTxs = txs,
         )
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState())
+
+    val recentRaw: StateFlow<List<RawE>> = repo.recentRaw.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val stats get() = repo.stats
+    var onboarded: Boolean
+        get() = repo.onboarded
+        set(v) { repo.onboarded = v }
+
+    /** Dry run of the capture pipeline on pasted text: nothing is saved. */
+    data class ParseCheck(val ignored: String?, val parsed: Parsed?, val cardName: String?)
+
+    fun checkText(text: String): ParseCheck {
+        val ignored = Parsers.ignorable(text)
+        val parsed = if (ignored == null) Parsers.parse(text, System.currentTimeMillis()) else null
+        val card = parsed?.let { p -> state.value.coreCards.firstOrNull { it.smsKey.isNotBlank() && it.smsKey.trim().equals(p.key, true) } }
+        return ParseCheck(ignored, parsed, card?.name)
+    }
 
     /** -1 = idle, otherwise the number of messages scanned so far. */
     val importing = MutableStateFlow(-1)

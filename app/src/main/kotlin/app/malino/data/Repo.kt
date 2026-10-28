@@ -9,11 +9,17 @@ import java.util.UUID
 class Repo(ctx: Context) {
     val db = Db.create(ctx)
     private val prefs = ctx.getSharedPreferences("malino", Context.MODE_PRIVATE)
+    val stats = app.malino.capture.CaptureStats(ctx)
 
     val cards: Flow<List<CardE>> = db.cards().observe()
     val txs: Flow<List<TxE>> = db.tx().observe()
     val categories: Flow<List<CategoryE>> = db.categories().observe()
     val attention: Flow<List<RawE>> = db.raw().observeAttention()
+    val recentRaw: Flow<List<RawE>> = db.raw().observeRecent()
+
+    var onboarded: Boolean
+        get() = prefs.getBoolean("onboarded", false)
+        set(v) { prefs.edit().putBoolean("onboarded", v).apply() }
 
     private fun newId() = UUID.randomUUID().toString()
 

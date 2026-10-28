@@ -1,6 +1,8 @@
 package app.malino.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
+import androidx.compose.foundation.background
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -13,13 +15,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.malino.core.Card
 import app.malino.core.Tx
 
 private enum class Tab(val label: String, val icon: ImageVector) {
-    Home("خانه", Icons.Rounded.Home), Inbox("صندوق", Icons.Rounded.Inbox), Tx("تراکنش‌ها", Icons.Rounded.ReceiptLong), More("بیشتر", Icons.Rounded.GridView)
+    Home("خانه", Icons.Rounded.Home), Inbox("صندوق", Icons.Rounded.Inbox), Tx("تراکنش‌ها", Icons.Rounded.ReceiptLong),
+    Reports("گزارش", Icons.Rounded.BarChart), More("بیشتر", Icons.Rounded.GridView)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -30,6 +35,9 @@ fun MalinoRoot(vm: MainVm = viewModel()) {
         val s by vm.state.collectAsStateWithLifecycle()
         var tab by rememberSaveable { mutableStateOf(Tab.Home) }
         var perms by remember { mutableStateOf(readPerms(ctx)) }
+        LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { perms = readPerms(ctx) }
+        var onboarded by remember { mutableStateOf(vm.onboarded) }
+        var showCheck by rememberSaveable { mutableStateOf(false) }
         var sheetTx by remember { mutableStateOf<Tx?>(null) }
         var showSheet by remember { mutableStateOf(false) }
         var editCard by remember { mutableStateOf<Card?>(null) }
@@ -71,8 +79,21 @@ fun MalinoRoot(vm: MainVm = viewModel()) {
                     Tab.Home -> HomeScreen(s, !perms.ok, goInbox = { tab = Tab.Inbox }, goMore = { tab = Tab.More })
                     Tab.Inbox -> InboxScreen(s, vm)
                     Tab.Tx -> TxScreen(s, onEdit = { sheetTx = it; showSheet = true })
-                    Tab.More -> MoreScreen(s, vm, perms, { perms = readPerms(ctx) }, onEditCard = { editCard = it; showCard = true })
+                    Tab.Reports -> ReportsScreen(s)
+                    Tab.More -> MoreScreen(s, vm, perms, onOpenCheck = { showCheck = true }, onEditCard = { editCard = it; showCard = true })
                 }
+            }
+        }
+
+        AnimatedVisibility(showCheck, enter = slideInVertically(spring(0.9f, Spring.StiffnessMediumLow)) { it / 3 } + fadeIn(), exit = slideOutVertically { it / 3 } + fadeOut()) {
+            BackHandler { showCheck = false }
+            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).systemBarsPadding()) {
+                CaptureCheckScreen(s, vm, onClose = { showCheck = false })
+            }
+        }
+        AnimatedVisibility(!onboarded, exit = fadeOut() + slideOutVertically { -it / 6 }) {
+            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+                OnboardingScreen(vm, onDone = { onboarded = true }, onCheck = { onboarded = true; showCheck = true })
             }
         }
 
