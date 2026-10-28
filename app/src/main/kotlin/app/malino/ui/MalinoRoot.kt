@@ -149,7 +149,10 @@ fun MalinoRoot(vm: MainVm = viewModel()) {
             LockScreen(vm, onUnlocked = { locked = false })
         }
 
-        if (showSheet) TxSheet(s, sheetTx, sheetKind, vm::newId, vm::saveTx, vm::deleteTx, vm::unlink) { showSheet = false }
+        val err by vm.errorMsg.collectAsStateWithLifecycle()
+        err?.let { m -> AlertDialog(onDismissRequest = { vm.errorMsg.value = null }, title = { Text("خطا") }, text = { Text(m) },
+            confirmButton = { TextButton({ vm.errorMsg.value = null }) { Text("باشه", fontWeight = FontWeight.Bold) } }) }
+        if (showSheet) TxSheet(s, sheetTx, sheetKind, vm::newId, vm::saveTx, vm::deleteTx, vm::unlink, vm::moveStartBefore) { showSheet = false }
         s.cards.firstOrNull { it.card.id == cardSheetId }?.let { cu ->
             CardSheet(cu, s, onEdit = { editCard = cu.card; cardIsNew = false; showCard = true; cardSheetId = null }, onDismiss = { cardSheetId = null })
         }

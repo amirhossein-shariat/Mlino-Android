@@ -155,7 +155,7 @@ fun TxRow(u: TxUi, modifier: Modifier = Modifier) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (u.unsettled && !u.dimmed) Text("مانده‌ی بانک در این بازه هماهنگ نیست؛ در صندوق ورودی تعیین تکلیف کنید", style = MaterialTheme.typography.labelSmall,
                 color = extra.warn, maxLines = 2)
-            if (u.dimmed) Text("قبل از تاریخ شروع کارت؛ در مانده و گزارش حساب نمی‌شود", style = MaterialTheme.typography.labelSmall,
+            if (u.dimmed) Text("این تراکنش قبل از تاریخ شروع کارت است و در مانده و گزارش حساب نمی‌شود. برای حساب شدن، رویش بزنید", style = MaterialTheme.typography.labelSmall,
                 color = extra.warn, maxLines = 2)
             // user note under the line when a category already took the title
             if (u.categoryName != null && t.type != TxType.ADJUST && t.categoryId != "roundup" && t.note.isNotBlank() && t.note !in AUTO_NOTES) Text("📝 " + t.note, style = MaterialTheme.typography.bodySmall,

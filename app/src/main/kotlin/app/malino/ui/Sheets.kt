@@ -38,7 +38,7 @@ private fun digits(s: String) = digitsOnly(s)
 /** Add / edit a transaction: big amount, numeric keypad, icon categories. [tx] == null means a new one; [kind0] 0=expense 1=income 2=fee. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TxSheet(s: UiState, tx: Tx?, kind0: Int, newId: () -> String, onSave: (Tx) -> Unit, onDelete: (String) -> Unit, onUnlink: (String) -> Unit, onDismiss: () -> Unit) {
+fun TxSheet(s: UiState, tx: Tx?, kind0: Int, newId: () -> String, onSave: (Tx) -> Unit, onDelete: (String) -> Unit, onUnlink: (String) -> Unit, onMoveStart: (String) -> Unit, onDismiss: () -> Unit) {
     val readOnly = tx != null && (tx.type == TxType.TRANSFER || tx.type == TxType.ADJUST)
     var kind by remember { mutableIntStateOf(when (tx?.type) { TxType.IN -> 1; TxType.FEE -> 2; null -> kind0; else -> 0 }) }
     var amount by remember { mutableStateOf(tx?.let { kotlin.math.abs(it.amount).toString() }.orEmpty()) }
@@ -56,6 +56,18 @@ fun TxSheet(s: UiState, tx: Tx?, kind0: Int, newId: () -> String, onSave: (Tx) -
         shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp), containerColor = MaterialTheme.colorScheme.surface,
     ) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            val dimU = tx?.let { t -> s.txs.firstOrNull { it.tx.id == t.id } }?.takeIf { it.dimmed }
+            if (dimU != null) {
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(extra.warnBg).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("چرا کم‌رنگ است؟", color = extra.warn, fontWeight = FontWeight.Bold)
+                    Text("تاریخ شروع کارت «${dimU.card?.name.orEmpty()}» (${fullDate(dimU.card?.openingAt ?: 0)}) بعد از این تراکنش است؛ برنامه فقط تراکنش‌های بعد از شروع را در مانده و گزارش حساب می‌کند.",
+                        color = extra.warn, style = MaterialTheme.typography.bodySmall)
+                    if (dimU.tx.balanceAfter != null) {
+                        Text("اگر می‌خواهید حساب شود، شروع کارت را به قبل از این تراکنش می‌بریم و موجودی اولیه از مانده‌ی بانک همین پیام حساب می‌شود.", color = extra.warn, style = MaterialTheme.typography.bodySmall)
+                        Button({ onMoveStart(dimU.tx.id); onDismiss() }, colors = ButtonDefaults.buttonColors(containerColor = extra.warn, contentColor = extra.warnBg)) { Text("شروع کارت را به قبل از این ببر") }
+                    } else Text("مانده‌ی بانک برای این تراکنش ثبت نشده؛ از «ویرایش کارت» تاریخ شروع را تغییر دهید.", color = extra.warn, style = MaterialTheme.typography.bodySmall)
+                }
+            }
             if (readOnly) {
                 Text(if (tx!!.type == TxType.TRANSFER) "انتقال بین کارت‌ها" else "تعدیل مانده", style = MaterialTheme.typography.titleLarge)
                 Text(

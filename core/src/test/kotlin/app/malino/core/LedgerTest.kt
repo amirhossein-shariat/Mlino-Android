@@ -54,4 +54,13 @@ class LedgerTest {
         assertEquals(Jalali.toMillis(1405, 7, 2, 1, 0), g.from); assertEquals(Jalali.toMillis(1405, 7, 2, 3, 0), g.at)
         assertEquals(setOf("n", "s3"), r.unsettled)
     }
+
+    @Test fun sameMinuteMessagesArrivingOutOfOrder() {
+        // real order: out 100 (balance 900) then in 50 (balance 950); the "in" message arrived first
+        val txs = listOf(t("in", 2, 10, TxType.IN, 50, 950, created = 1), t("out", 2, 10, TxType.OUT, 100, 900, created = 2))
+        val r = Ledger.compute(listOf(card), txs)
+        assertEquals(emptyList(), r.gaps.map { it.txId })
+        assertEquals(mapOf("out" to 900L, "in" to 950L), r.after)
+        assertEquals(950L, r.current["c1"])
+    }
 }

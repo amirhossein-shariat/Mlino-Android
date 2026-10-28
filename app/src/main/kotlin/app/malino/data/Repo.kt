@@ -185,6 +185,15 @@ class Repo(ctx: Context) {
         db.cards().upsert(card.copy(openingAt = t.at + 1, openingBalance = bal).toE())
     }
 
+    /** A message older than the card start: restart the card earlier, with the opening balance derived from that message's bank balance. */
+    suspend fun moveStartBefore(txId: String): Boolean {
+        val t = db.tx().get(txId)?.toCore() ?: return false
+        val bal = t.balanceAfter ?: return false
+        val card = db.cards().all().firstOrNull { it.id == t.cardId }?.toCore() ?: return false
+        db.cards().upsert(card.copy(openingAt = t.at - 1000, openingBalance = bal - Ledger.effect(t)).toE())
+        return true
+    }
+
     enum class Reset { AllTx, TxRange, Learned, Log, Plan, Everything }
 
     /** Destructive clean-ups offered in settings (the caller makes a safety backup first). [to] is exclusive. */
@@ -221,7 +230,8 @@ class Repo(ctx: Context) {
     suspend fun resolveGap(gap: Ledger.Gap, type: TxType, categoryId: String?, note: String, chosenAt: Long? = null) {
         val t = db.tx().get(gap.txId)?.toCore() ?: return
         // anywhere inside the gap period; outside it the balance would not add up again
-        val at = (chosenAt ?: (t.at - 1000)).coerceIn(gap.from + 1, t.at - 1)
+        val hi = t.at - 1
+        val at = (chosenAt ?: (t.at - 1000)).coerceIn(minOf(gap.from + 1, hi), hi)
         val amount = kotlin.math.abs(gap.diff)
         val fix = when (type) {
             TxType.OUT -> Tx(newId(), gap.cardId, at, TxType.OUT, amount, note = note, categoryId = categoryId)

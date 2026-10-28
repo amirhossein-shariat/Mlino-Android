@@ -184,7 +184,16 @@ class MainVm(app: Application) : AndroidViewModel(app) {
     val importing = MutableStateFlow(-1)
     val importedCount = MutableStateFlow(0)
 
-    private fun io(block: suspend () -> Unit) { viewModelScope.launch(Dispatchers.IO) { block() } }
+    /** Shown as a dialog instead of crashing the app when a background action fails. */
+    val errorMsg = MutableStateFlow<String?>(null)
+    private fun io(block: suspend () -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try { block() } catch (e: Throwable) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                errorMsg.value = "خطایی رخ داد: " + (e.message ?: e::class.java.simpleName)
+            }
+        }
+    }
 
     fun confirm(txId: String, cat: String?) = io { repo.confirm(txId, cat) }
     fun confirmAll(picks: Map<String, String?>) = io { state.value.inbox.forEach { repo.confirm(it.tx.id, picks[it.tx.id] ?: it.tx.categoryId) } }
@@ -192,6 +201,7 @@ class MainVm(app: Application) : AndroidViewModel(app) {
     fun deleteTx(id: String) = io { repo.deleteTx(id) }
     fun saveCard(c: Card) = io { repo.saveCard(c) }
     fun resolveGap(g: Ledger.Gap, type: TxType, cat: String?, note: String, at: Long) = io { repo.resolveGap(g, type, cat, note, at) }
+    fun moveStartBefore(txId: String) = io { repo.moveStartBefore(txId) }
     fun moveStartAfter(txId: String) = io { repo.moveStartAfter(txId) }
     fun snoozeGap(txId: String, on: Boolean) = repo.snoozeGap(txId, on)
     fun unlink(txId: String) = io { repo.unlinkTransfer(txId) }
