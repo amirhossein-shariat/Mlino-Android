@@ -96,6 +96,8 @@ fun TxRow(u: TxUi, modifier: Modifier = Modifier) {
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text("${u.card?.name.orEmpty()} · ${dayLabel(t.at)} ${clock(t.at)}", style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (u.dimmed) Text("قبل از تاریخ شروع کارت؛ در مانده و گزارش حساب نمی‌شود", style = MaterialTheme.typography.labelSmall,
+                color = extra.warn, maxLines = 2)
             // user note under the line when a category already took the title
             if (u.categoryName != null && t.note.isNotBlank()) Text("📝 " + t.note, style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = .75f), maxLines = 2, overflow = TextOverflow.Ellipsis)
