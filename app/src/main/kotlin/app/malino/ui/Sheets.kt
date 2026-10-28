@@ -101,7 +101,7 @@ fun TxSheet(s: UiState, tx: Tx?, kind0: Int, newId: () -> String, onSave: (Tx) -
                 OutlinedTextField(hh, { hh = digits(it).take(2) }, Modifier.width(76.dp), singleLine = true, label = { Text("ساعت") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
                 OutlinedTextField(mm, { mm = digits(it).take(2) }, Modifier.width(76.dp), singleLine = true, label = { Text("دقیقه") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
             }
-            OutlinedTextField(note, { note = it }, label = { Text("یادداشت (اختیاری)") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp))
+            OutlinedTextField(note, { note = it }, label = { Text("یادداشت (اختیاری)") }, minLines = 2, maxLines = 4, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp))
             Keypad(onKey = { k ->
                 amount = when (k) {
                     "⌫" -> amount.dropLast(1)
