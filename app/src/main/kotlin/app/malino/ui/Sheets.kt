@@ -36,7 +36,7 @@ private fun digits(s: String) = digitsOnly(s)
 /** Add / edit a transaction: big amount, numeric keypad, icon categories. [tx] == null means a new one; [kind0] 0=expense 1=income 2=fee. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TxSheet(s: UiState, tx: Tx?, kind0: Int, newId: () -> String, onSave: (Tx) -> Unit, onDelete: (String) -> Unit, onDismiss: () -> Unit) {
+fun TxSheet(s: UiState, tx: Tx?, kind0: Int, newId: () -> String, onSave: (Tx) -> Unit, onDelete: (String) -> Unit, onUnlink: (String) -> Unit, onDismiss: () -> Unit) {
     val readOnly = tx != null && (tx.type == TxType.TRANSFER || tx.type == TxType.ADJUST)
     var kind by remember { mutableIntStateOf(when (tx?.type) { TxType.IN -> 1; TxType.FEE -> 2; null -> kind0; else -> 0 }) }
     var amount by remember { mutableStateOf(tx?.let { kotlin.math.abs(it.amount).toString() }.orEmpty()) }
@@ -57,10 +57,13 @@ fun TxSheet(s: UiState, tx: Tx?, kind0: Int, newId: () -> String, onSave: (Tx) -
             if (readOnly) {
                 Text(if (tx!!.type == TxType.TRANSFER) "انتقال بین کارت‌ها" else "تعدیل مانده", style = MaterialTheme.typography.titleLarge)
                 Text(
-                    if (tx.type == TxType.TRANSFER) "پول از یک کارت شما به کارت دیگرتان رفته است. این مورد جزو هزینه یا درآمد حساب نمی‌شود و فقط مانده‌ی دو کارت را جابه‌جا می‌کند. اگر انتقال نبوده، حذفش کنید." else "برنامه این تعدیل را خودش ساخته تا مانده با مانده‌ی بانک یکی شود. جزو هزینه یا درآمد نیست.",
+                    if (tx.type == TxType.TRANSFER) "پول از یک کارت شما به کارت دیگرتان رفته است. این مورد جزو هزینه یا درآمد حساب نمی‌شود و فقط مانده‌ی دو کارت را جابه‌جا می‌کند. اگر انتقال نبوده، با دکمه‌ی زیر به برداشت/واریز عادی تبدیلش کنید." else "برنامه این تعدیل را خودش ساخته تا مانده با مانده‌ی بانک یکی شود. جزو هزینه یا درآمد نیست.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                OutlinedButton({ onDelete(tx.id); onDismiss() }) { Text("حذف") }
+                if (tx.type == TxType.TRANSFER) {
+                    Button({ onUnlink(tx.id); onDismiss() }, Modifier.fillMaxWidth()) { Text("انتقال نبوده؛ تبدیل به برداشت/واریز عادی") }
+                }
+                OutlinedButton({ onDelete(tx.id); onDismiss() }, Modifier.fillMaxWidth()) { Text("حذف") }
                 return@Column
             }
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {

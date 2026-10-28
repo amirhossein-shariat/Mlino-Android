@@ -182,7 +182,7 @@ fun ReportsScreen(s: UiState, onCard: (String) -> Unit = {}, modifier: Modifier 
                                 Text(t.categoryId?.let { catName[it] } ?: t.note.ifBlank { "برداشت" }, fontWeight = FontWeight.Medium)
                                 Text("${dayLabel(t.at)} ${clock(t.at)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Text("−" + money(t.amount), color = extra.expense, fontWeight = FontWeight.Bold)
+                            Text(signedMoney(t.amount, false), color = extra.expense, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -277,9 +277,9 @@ private fun CardMonthTile(r: CardReport, card: Card?, onClick: () -> Unit, modif
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), verticalAlignment = Alignment.CenterVertically) {
             MiniStat("شروع ماه", money(r.opening), MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
             Box(Modifier.width(1.dp).fillMaxHeight().background(MaterialTheme.colorScheme.outline))
-            MiniStat("ورودی", "+" + money(r.inn), ex.income, Modifier.weight(1f))
+            MiniStat("ورودی", signedMoney(r.inn, true), ex.income, Modifier.weight(1f))
             Box(Modifier.width(1.dp).fillMaxHeight().background(MaterialTheme.colorScheme.outline))
-            MiniStat("خروجی", "−" + money(r.out), ex.expense, Modifier.weight(1f))
+            MiniStat("خروجی", signedMoney(r.out, false), ex.expense, Modifier.weight(1f))
         }
         if (r.inn + r.out > 0) {
             val up = change >= 0

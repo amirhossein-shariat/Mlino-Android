@@ -53,5 +53,5 @@ fun AnimatedMoney(value: Long, style: TextStyle, color: Color = Color.Unspecifie
     val anim = remember { Animatable(0f) }
     LaunchedEffect(value) { anim.animateTo(value.toFloat(), tween(850, easing = FastOutSlowInEasing)) }
     val shown = if (anim.isRunning) anim.value.toLong() else value
-    Text((if (shown < 0) "−" else prefix) + money(shown), style = style, color = color)
+    Text(money(shown) + (if (shown < 0) "\u200F−" else if (prefix.isNotEmpty()) "\u200F" + prefix else ""), style = style, color = color)
 }

@@ -3,6 +3,7 @@
 package app.malino.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -51,26 +52,21 @@ private fun SwipeConfirm(onConfirm: () -> Unit, content: @Composable () -> Unit)
 fun InboxScreen(s: UiState, vm: MainVm, onTeach: (app.malino.data.RawE) -> Unit, onCardFrom: (app.malino.data.RawE) -> Unit, modifier: Modifier = Modifier) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val picks = remember { mutableStateMapOf<String, String?>() }
+    var showSnoozed by remember { mutableStateOf(false) }
     val empty = s.inbox.isEmpty() && s.gaps.isEmpty() && s.attention.isEmpty()
     LazyColumn(modifier.fillMaxSize().statusBarsPadding(), contentPadding = PaddingValues(16.dp, 12.dp, 16.dp, 130.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item { Text("صندوق ورودی", style = MaterialTheme.typography.titleLarge, modifier = Modifier.enter(0)) }
 
-        items(s.gaps, key = { "gap" + it.gap.txId }) { g ->
-            val ex = extra
-            Column(
-                Modifier.animateItem().fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(ex.warnBg).padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text("تراکنش جاافتاده در ${g.cardName}", color = ex.warn, fontWeight = FontWeight.Bold)
-                Text(
-                    "مانده‌ی بانک ${money(kotlin.math.abs(g.gap.diff))} ریال ${if (g.gap.diff < 0) "کمتر" else "بیشتر"} از حساب برنامه است. معمولاً یک کارمزد یا پیامک گم‌شده است.",
-                    color = ex.warn, style = MaterialTheme.typography.bodySmall,
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (g.gap.diff < 0) Button({ vm.resolveGap(g.gap, true) }, colors = ButtonDefaults.buttonColors(containerColor = ex.warn, contentColor = ex.warnBg)) { Text("ثبت به‌عنوان کارمزد") }
-                    FilledTonalButton({ vm.resolveGap(g.gap, false) }) { Text("تعدیل") }
+        items(s.gaps, key = { "gap" + it.gap.txId }) { g -> GapCard(g, s, vm, snoozed = false, Modifier.animateItem()) }
+
+        if (s.snoozedGaps.isNotEmpty()) {
+            item(key = "snoozed-h") {
+                Row(Modifier.animateItem().fillMaxWidth().clickable { showSnoozed = !showSnoozed }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("اختلاف‌های موکول‌شده (${fa(s.snoozedGaps.size)})", Modifier.weight(1f), fontWeight = FontWeight.Medium)
+                    Text(if (showSnoozed) "پنهان" else "نمایش", color = extra.accent)
                 }
             }
+            if (showSnoozed) items(s.snoozedGaps, key = { "sgap" + it.gap.txId }) { g -> GapCard(g, s, vm, snoozed = true, Modifier.animateItem()) }
         }
 
         items(s.attention, key = { "raw" + it.id }) { r ->
@@ -140,6 +136,54 @@ fun InboxScreen(s: UiState, vm: MainVm, onTeach: (app.malino.data.RawE) -> Unit,
 
         if (s.inbox.size > 1) item {
             FilledTonalButton({ vm.confirmAll(picks) }, Modifier.fillMaxWidth().animateItem()) { Text("تأیید همه (${fa(s.inbox.size)})") }
+        }
+    }
+}
+
+
+/** A balance mismatch explained in plain words, with the period it happened in and ways to settle it right here (or later). */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun GapCard(g: GapUi, s: UiState, vm: MainVm, snoozed: Boolean, modifier: Modifier) {
+    val ex = extra
+    val less = g.gap.diff < 0
+    val types = if (less) listOf(TxType.OUT to "هزینه", TxType.FEE to "کارمزد", TxType.ADJUST to "تعدیل") else listOf(TxType.IN to "درآمد", TxType.ADJUST to "تعدیل")
+    var open by remember { mutableStateOf(false) }
+    var type by remember { mutableStateOf(types.first().first) }
+    var cat by remember { mutableStateOf<String?>(null) }
+    var note by remember { mutableStateOf("") }
+    val cats = remember(s.categories, type) { s.categories.filter { it.kind == if (type == TxType.IN) "income" else "expense" } }
+    val amount = money(kotlin.math.abs(g.gap.diff))
+    Column(modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(ex.warnBg).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("اختلاف مانده در ${cardLabel(g.card)}", color = ex.warn, fontWeight = FontWeight.Bold)
+        Text(
+            "مانده‌ی بانک در آخرین پیامک (${dayLabel(g.gap.at)} ${clock(g.gap.at)}) $amount ریال ${if (less) "کمتر" else "بیشتر"} از حساب برنامه است. " +
+                "این اختلاف بین ${dayLabel(g.gap.from)} ${clock(g.gap.from)} و ${dayLabel(g.gap.at)} ${clock(g.gap.at)} پیش آمده؛ یعنی در این بازه " +
+                (if (less) "یک خروج پول ثبت نشده (پیامکش نرسیده یا کارمزد بوده)." else "یک ورودی پول ثبت نشده (پیامکش نرسیده)."),
+            color = ex.warn, style = MaterialTheme.typography.bodySmall,
+        )
+        if (!open) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button({ open = true }, colors = ButtonDefaults.buttonColors(containerColor = ex.warn, contentColor = ex.warnBg)) { Text("تعیین تکلیف") }
+                if (!snoozed) OutlinedButton({ vm.snoozeGap(g.gap.txId, true) }) { Text("بعداً") }
+                else OutlinedButton({ vm.snoozeGap(g.gap.txId, false) }) { Text("برگردان به صندوق") }
+            }
+        } else {
+            Text("این مبلغ چه بوده؟", color = ex.warn, fontWeight = FontWeight.Medium, style = MaterialTheme.typography.bodySmall)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                types.forEach { (t, label) -> FilterChip(type == t, { type = t; cat = null }, { Text(label) }, shape = RoundedCornerShape(99.dp)) }
+            }
+            if (type == TxType.OUT || type == TxType.IN) LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(cats, key = { it.id }) { c -> FilterChip(cat == c.id, { cat = if (cat == c.id) null else c.id }, { Text(c.name) }, shape = RoundedCornerShape(99.dp)) }
+            }
+            OutlinedTextField(note, { note = it }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("یادداشت (اختیاری)") }, shape = RoundedCornerShape(14.dp))
+            Text(if (type == TxType.ADJUST) "«تعدیل» فقط مانده را درست می‌کند و جزو هزینه یا درآمد نیست." else "این مبلغ به‌عنوان تراکنش در همان بازه ثبت می‌شود.",
+                color = ex.warn, style = MaterialTheme.typography.labelSmall)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button({ vm.resolveGap(g.gap, type, cat, note.trim()) }, colors = ButtonDefaults.buttonColors(containerColor = ex.warn, contentColor = ex.warnBg)) { Text("ثبت") }
+                TextButton({ open = false }) { Text("انصراف") }
+                if (!snoozed) TextButton({ vm.snoozeGap(g.gap.txId, true) }) { Text("بعداً") }
+            }
         }
     }
 }

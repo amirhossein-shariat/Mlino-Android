@@ -25,6 +25,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -88,14 +89,17 @@ fun TxRow(u: TxUi, modifier: Modifier = Modifier) {
         TxType.IN -> ex.income; TxType.OUT, TxType.FEE -> ex.expense; TxType.ADJUST -> if (plus) ex.income else ex.expense
         TxType.TRANSFER -> MaterialTheme.colorScheme.onSurface
     }
-    Row(modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically,
+    // faded = before the card start (not counted) or inside a period whose bank balance has not been settled yet
+    Row(modifier.fillMaxWidth().alpha(if (u.dimmed || u.unsettled) .5f else 1f).padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         IconBadge(icon, bg, fg)
         Column(Modifier.weight(1f)) {
             Text(u.categoryName ?: t.note.ifBlank { typeLabel(t.type) }, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium,
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text("${u.card?.name.orEmpty()} · ${dayLabel(t.at)} ${clock(t.at)}", style = MaterialTheme.typography.bodySmall,
+            Text("${cardLabel(u.card)} · ${dayLabel(t.at)} ${clock(t.at)}", style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (u.unsettled && !u.dimmed) Text("مانده‌ی بانک در این بازه هماهنگ نیست؛ در صندوق ورودی تعیین تکلیف کنید", style = MaterialTheme.typography.labelSmall,
+                color = extra.warn, maxLines = 2)
             if (u.dimmed) Text("قبل از تاریخ شروع کارت؛ در مانده و گزارش حساب نمی‌شود", style = MaterialTheme.typography.labelSmall,
                 color = extra.warn, maxLines = 2)
             // user note under the line when a category already took the title
@@ -103,10 +107,9 @@ fun TxRow(u: TxUi, modifier: Modifier = Modifier) {
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = .75f), maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         Text(
-            if (t.type == TxType.TRANSFER && !t.dirIn) "−" + money(kotlin.math.abs(t.amount)) else signedMoney(kotlin.math.abs(t.amount), plus),
+            signedMoney(kotlin.math.abs(t.amount), plus),
             style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold,
-            // before the card's start date: still shown, but faded (not counted in the balance)
-            color = if (u.dimmed) amountColor.copy(alpha = .4f) else amountColor,
+            color = amountColor,
         )
     }
 }
@@ -122,3 +125,10 @@ fun EmptyState(title: String, hint: String, modifier: Modifier = Modifier) =
         Text(title, style = MaterialTheme.typography.titleMedium)
         Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
+
+/** «Bank (name)» as entered when the card was added. */
+fun cardLabel(c: app.malino.core.Card?): String = when {
+    c == null -> ""
+    c.bank.isBlank() -> c.name
+    else -> "${c.bank} (${c.name})"
+}

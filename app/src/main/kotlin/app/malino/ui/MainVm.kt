@@ -16,8 +16,8 @@ import kotlinx.coroutines.withContext
 import java.util.UUID
 
 data class CardUi(val card: Card, val balance: Long)
-data class GapUi(val gap: Ledger.Gap, val cardName: String)
-data class TxUi(val tx: Tx, val card: Card?, val categoryName: String?, val dimmed: Boolean, val after: Long?)
+data class GapUi(val gap: Ledger.Gap, val card: Card?) { val cardName get() = card?.name.orEmpty() }
+data class TxUi(val tx: Tx, val card: Card?, val categoryName: String?, val dimmed: Boolean, val after: Long?, val unsettled: Boolean = false)
 
 data class UiState(
     val loaded: Boolean = false,
@@ -26,6 +26,7 @@ data class UiState(
     val txs: List<TxUi> = emptyList(),
     val inbox: List<TxUi> = emptyList(),
     val gaps: List<GapUi> = emptyList(),
+    val snoozedGaps: List<GapUi> = emptyList(),
     val attention: List<RawE> = emptyList(),
     val categories: List<CategoryE> = emptyList(),
     val monthIn: Long = 0,
@@ -55,7 +56,7 @@ class MainVm(app: Application) : AndroidViewModel(app) {
 
     private val planFlow = combine(repo.budgets, repo.debts, repo.goals, repo.assets, repo.prices, ::PlanData)
 
-    val state: StateFlow<UiState> = combine(combine(repo.cards, repo.txs, repo.categories, repo.attention) { a, b, c, d -> listOf(a, b, c, d) }, planFlow) { four, plan ->
+    val state: StateFlow<UiState> = combine(combine(repo.cards, repo.txs, repo.categories, repo.attention) { a, b, c, d -> listOf(a, b, c, d) }, planFlow, repo.snoozedGaps) { four, plan, snoozed ->
         @Suppress("UNCHECKED_CAST")
         val cardsE = four[0] as List<app.malino.data.CardE>
         @Suppress("UNCHECKED_CAST")
@@ -77,7 +78,7 @@ class MainVm(app: Application) : AndroidViewModel(app) {
                 TxType.OUT, TxType.FEE -> mOut += t.amount
                 else -> {}
             }
-            TxUi(t, byCard[t.cardId], t.categoryId?.let { catName[it] }, t.id in res.before, res.after[t.id])
+            TxUi(t, byCard[t.cardId], t.categoryId?.let { catName[it] }, t.id in res.before, res.after[t.id], t.id in res.unsettled)
         }.sortedWith(compareByDescending<TxUi> { it.tx.at }.thenByDescending { it.tx.createdAt })
         val nowMs = System.currentTimeMillis()
         val today = Jalali.today(nowMs)
@@ -90,7 +91,8 @@ class MainVm(app: Application) : AndroidViewModel(app) {
             total = res.current.values.sum(),
             txs = ui,
             inbox = ui.filter { it.tx.status == TxStatus.INBOX },
-            gaps = res.gaps.map { GapUi(it, byCard[it.cardId]?.name.orEmpty()) },
+            gaps = res.gaps.filter { it.txId !in snoozed }.map { GapUi(it, byCard[it.cardId]) },
+            snoozedGaps = res.gaps.filter { it.txId in snoozed }.map { GapUi(it, byCard[it.cardId]) },
             attention = attention,
             categories = cats,
             monthIn = mIn, monthOut = mOut, coreCards = cards, coreTxs = txs, balances = res.current,
@@ -168,7 +170,8 @@ class MainVm(app: Application) : AndroidViewModel(app) {
     fun saveTx(t: Tx) = io { repo.saveTx(t) }
     fun deleteTx(id: String) = io { repo.deleteTx(id) }
     fun saveCard(c: Card) = io { repo.saveCard(c) }
-    fun resolveGap(g: Ledger.Gap, asFee: Boolean) = io { repo.resolveGap(g, asFee) }
+    fun resolveGap(g: Ledger.Gap, type: TxType, cat: String?, note: String) = io { repo.resolveGap(g, type, cat, note) }
+    fun snoozeGap(txId: String, on: Boolean) = repo.snoozeGap(txId, on)
     fun unlink(txId: String) = io { repo.unlinkTransfer(txId) }
     fun dismissRaw(id: String) = io { repo.dismissRaw(id) }
     fun reprocess() = io { repo.reprocess() }

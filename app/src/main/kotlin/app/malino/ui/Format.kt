@@ -5,7 +5,8 @@ import app.malino.core.Jalali
 /** 1234567 -> ۱٬۲۳۴٬۵۶۷ */
 fun money(n: Long): String = Jalali.toFa(kotlin.math.abs(n).toString().reversed().chunked(3).joinToString("٬").reversed())
 
-fun signedMoney(n: Long, plus: Boolean): String = (if (plus) "+" else "−") + money(n)
+/** The sign goes after the digits in logical order, which is the LEFT side of the number in RTL. */
+fun signedMoney(n: Long, plus: Boolean): String = money(n) + "\u200F" + (if (plus) "+" else "−")
 
 fun fa(n: Int) = Jalali.toFa(n)
 

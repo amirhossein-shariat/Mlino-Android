@@ -128,7 +128,7 @@ fun MalinoRoot(vm: MainVm = viewModel()) {
             LockScreen(vm, onUnlocked = { locked = false })
         }
 
-        if (showSheet) TxSheet(s, sheetTx, sheetKind, vm::newId, vm::saveTx, vm::deleteTx) { showSheet = false }
+        if (showSheet) TxSheet(s, sheetTx, sheetKind, vm::newId, vm::saveTx, vm::deleteTx, vm::unlink) { showSheet = false }
         s.cards.firstOrNull { it.card.id == cardSheetId }?.let { cu ->
             CardSheet(cu, s, onEdit = { editCard = cu.card; cardIsNew = false; showCard = true; cardSheetId = null }, onDismiss = { cardSheetId = null })
         }

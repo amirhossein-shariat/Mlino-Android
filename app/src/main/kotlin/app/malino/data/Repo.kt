@@ -138,13 +138,27 @@ class Repo(ctx: Context) {
         db.cards().delete(c); return true
     }
 
-    /** Adds the missing amount of a gap 1 s before the transaction that revealed it. */
-    suspend fun resolveGap(gap: Ledger.Gap, asFee: Boolean) {
+    /** Gaps the user postponed; they stay faded in the list but leave the inbox badge. */
+    val snoozedGaps = kotlinx.coroutines.flow.MutableStateFlow(prefs.getStringSet("gap_snooze", emptySet()) ?: emptySet())
+    fun snoozeGap(txId: String, on: Boolean) {
+        val v = if (on) snoozedGaps.value + txId else snoozedGaps.value - txId
+        snoozedGaps.value = v
+        prefs.edit().putStringSet("gap_snooze", v).apply()
+    }
+
+    /** Adds the missing amount of a gap as the transaction the user chose, inside the gap's period (just before the message that revealed it). */
+    suspend fun resolveGap(gap: Ledger.Gap, type: TxType, categoryId: String?, note: String) {
         val t = db.tx().get(gap.txId)?.toCore() ?: return
-        val fix = if (asFee && gap.diff < 0)
-            Tx(newId(), gap.cardId, t.at - 1000, TxType.FEE, -gap.diff, note = "کارمزد", categoryId = "fee")
-        else Tx(newId(), gap.cardId, t.at - 1000, TxType.ADJUST, gap.diff, note = "تعدیل مانده")
+        val at = minOf(maxOf(gap.from + 1, t.at - 1000), t.at - 1)
+        val amount = kotlin.math.abs(gap.diff)
+        val fix = when (type) {
+            TxType.OUT -> Tx(newId(), gap.cardId, at, TxType.OUT, amount, note = note, categoryId = categoryId)
+            TxType.FEE -> Tx(newId(), gap.cardId, at, TxType.FEE, amount, note = note.ifBlank { "کارمزد" }, categoryId = "fee")
+            TxType.IN -> Tx(newId(), gap.cardId, at, TxType.IN, amount, note = note, categoryId = categoryId)
+            else -> Tx(newId(), gap.cardId, at, TxType.ADJUST, gap.diff, note = note.ifBlank { "تعدیل مانده" })
+        }
         db.tx().upsert(listOf(fix.toE()))
+        snoozeGap(gap.txId, false)
     }
 
     /** Undo an auto-detected transfer: the pair goes back to plain out/in and the fee is merged back into the out side. */

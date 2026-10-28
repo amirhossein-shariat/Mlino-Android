@@ -51,7 +51,7 @@ fun TxScreen(s: UiState, onEdit: (Tx) -> Unit, modifier: Modifier = Modifier) {
                 val sum = rows.sumOf { u -> when (u.tx.type) { TxType.IN -> u.tx.amount; TxType.OUT, TxType.FEE -> -u.tx.amount; else -> 0L } }
                 Row(Modifier.animateItem().fillMaxWidth().padding(start = 6.dp, end = 6.dp, top = 6.dp)) {
                     Text(day, Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text((if (sum >= 0) "+" else "−") + money(sum), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(signedMoney(kotlin.math.abs(sum), sum >= 0), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             items(rows, key = { it.tx.id }) { u ->

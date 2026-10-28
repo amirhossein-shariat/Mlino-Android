@@ -37,13 +37,21 @@ class LedgerTest {
         assertEquals(emptyList(), Ledger.compute(listOf(card), listOf(t("s1", 2, 1, TxType.OUT, 100, 900), t("s2", 2, 2, TxType.OUT, 50, 850))).gaps)
         val r = Ledger.compute(listOf(card), listOf(t("s1", 2, 1, TxType.OUT, 100, 900), t("s2", 2, 2, TxType.OUT, 50, 850),
             t("s3", 2, 3, TxType.OUT, 50, 600), t("s4", 2, 4, TxType.IN, 10, 610)))
-        assertEquals(listOf(Ledger.Gap("s3", "c1", -200)), r.gaps)
+        assertEquals(listOf(Triple("s3", "c1", -200L)), r.gaps.map { Triple(it.txId, it.cardId, it.diff) })
         assertEquals(mapOf("s1" to 900L, "s2" to 850L, "s3" to 600L, "s4" to 610L), r.after)
         val fixed = Ledger.compute(listOf(card), listOf(t("s1", 2, 1, TxType.OUT, 100, 900), t("s2", 2, 2, TxType.OUT, 50, 850),
             t("fix", 2, 2, TxType.FEE, 200, at = Jalali.toMillis(1405, 7, 2, 2, 30)), t("s3", 2, 3, TxType.OUT, 50, 600)))
         assertEquals(emptyList(), fixed.gaps)
         // wrong opening balance shows up on the first bank-reported tx
         val g = Ledger.compute(listOf(card.copy(openingBalance = 0)), listOf(t("s1", 2, 1, TxType.OUT, 100, 900)))
-        assertEquals(listOf(Ledger.Gap("s1", "c1", 1000)), g.gaps)
+        assertEquals(listOf(Triple("s1", "c1", 1000L)), g.gaps.map { Triple(it.txId, it.cardId, it.diff) })
+    }
+
+    @Test fun gapPeriodAndUnsettled() {
+        val r = Ledger.compute(listOf(card), listOf(t("s1", 2, 1, TxType.OUT, 100, 900), t("n", 2, 2, TxType.OUT, 10),
+            t("s3", 2, 3, TxType.OUT, 50, 600), t("s4", 2, 4, TxType.IN, 10, 610)))
+        val g = r.gaps.single()
+        assertEquals(Jalali.toMillis(1405, 7, 2, 1, 0), g.from); assertEquals(Jalali.toMillis(1405, 7, 2, 3, 0), g.at)
+        assertEquals(setOf("n", "s3"), r.unsettled)
     }
 }
