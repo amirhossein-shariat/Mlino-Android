@@ -29,10 +29,28 @@ jobs:
         run: |
           set -o pipefail
           ./gradlew :app:assembleDebug --no-daemon --console=plain 2>&1 | tee app.log
-      - name: Release APK (R8 + resource shrinking, unsigned)
+      - name: Prepare the signing key (only when the repository has the secrets)
+        env:
+          KS_B64: ${{ secrets.MALINO_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/malino-release.jks"
+            echo "MALINO_KEYSTORE=$RUNNER_TEMP/malino-release.jks" >> "$GITHUB_ENV"
+            echo "signing key found: the release APK will be signed"
+          else
+            echo "no signing key: the release APK stays unsigned"
+          fi
+      - name: Release APK (R8 + resource shrinking)
+        env:
+          MALINO_KEYSTORE_PASSWORD: ${{ secrets.MALINO_KEYSTORE_PASSWORD }}
+          MALINO_KEY_ALIAS: ${{ secrets.MALINO_KEY_ALIAS }}
+          MALINO_KEY_PASSWORD: ${{ secrets.MALINO_KEY_PASSWORD }}
         run: |
           set -o pipefail
           ./gradlew :app:assembleRelease --no-daemon --console=plain 2>&1 | tee release.log
+          ls -la app/build/outputs/apk/release/
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort | tail -1)
+          "$APKSIGNER" verify --print-certs app/build/outputs/apk/release/*.apk || echo "(unsigned)"
       - name: Error summary
         if: failure()
         run: |
@@ -46,12 +64,12 @@ jobs:
         run: |
           set -e
           mkdir /tmp/out && cp app/build/outputs/apk/debug/*.apk /tmp/out/malino-debug.apk
-          cp app/build/outputs/apk/release/*.apk /tmp/out/malino-release-unsigned.apk
+          cp app/build/outputs/apk/release/*.apk /tmp/out/malino-release.apk
           cd /tmp/out
           git init -q -b builds
           git config user.name "github-actions"
           git config user.email "actions@users.noreply.github.com"
-          git add malino-debug.apk malino-release-unsigned.apk
+          git add malino-debug.apk malino-release.apk
           git commit -q -m "malino-debug.apk from ${GITHUB_SHA}"
           git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" builds
       - uses: actions/upload-artifact@v4
