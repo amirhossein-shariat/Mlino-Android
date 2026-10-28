@@ -85,7 +85,7 @@ fun MalinoRoot(vm: MainVm = viewModel()) {
                         goTx = { tab = Tab.Tx }, goReports = { tab = Tab.Reports }, onAdd = ::add, onPage = { page = it }, onCard = { cardSheetId = it.card.id })
                     Tab.Inbox -> InboxScreen(s, vm, onTeach = { teachRaw = it }, onCardFrom = { r -> editCard = cardFromMessage(r); cardIsNew = true; showCard = true })
                     Tab.Tx -> TxScreen(s, onEdit = { sheetTx = it; showSheet = true })
-                    Tab.Reports -> ReportsScreen(s, Modifier.statusBarsPadding())
+                    Tab.Reports -> ReportsScreen(s, onCard = { cardSheetId = it }, modifier = Modifier.statusBarsPadding())
                     Tab.More -> MoreScreen(s, vm, perms, onOpenCheck = { showCheck = true }, onPage = { page = it }, onOpenCard = { cardSheetId = it.id }, onEditCard = { editCard = it; cardIsNew = true; showCard = true }, modifier = Modifier.statusBarsPadding())
                 }
             }

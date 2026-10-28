@@ -9,10 +9,13 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.border
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ChevronLeft
+import androidx.compose.material.icons.rounded.CreditCard
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,10 +23,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import app.malino.core.Card
+import app.malino.core.CardReport
 import app.malino.core.Jalali
 import app.malino.core.Report
 import app.malino.core.Reports
@@ -31,7 +38,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 @Composable
-fun ReportsScreen(s: UiState, modifier: Modifier = Modifier) {
+fun ReportsScreen(s: UiState, onCard: (String) -> Unit = {}, modifier: Modifier = Modifier) {
     val today = remember { Jalali.today() }
     var y by rememberSaveable { mutableIntStateOf(today.y) }
     var m by rememberSaveable { mutableIntStateOf(today.m) }
@@ -159,19 +166,9 @@ fun ReportsScreen(s: UiState, modifier: Modifier = Modifier) {
             }
         }
 
-        item {
-            Surface2(Modifier.enter(5)) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("کارت‌ها در این ماه", fontWeight = FontWeight.Bold)
-                    cur.cards.forEach { c ->
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Row { Text(c.name, Modifier.weight(1f), fontWeight = FontWeight.Medium); Text(money(c.closing), fontWeight = FontWeight.Bold) }
-                            Text("شروع ${money(c.opening)} · ورودی ${money(c.inn)} · خروجی ${money(c.out)}", style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                }
-            }
+        item { SectionTitle("کارت‌ها در این ماه", Modifier.enter(5)) }
+        itemsIndexed(cur.cards, key = { _, c -> "cm" + c.cardId }) { i, cr ->
+            CardMonthTile(cr, s.cards.firstOrNull { it.card.id == cr.cardId }?.card, { onCard(cr.cardId) }, Modifier.enter(5 + i))
         }
 
         if (cur.top.isNotEmpty()) item {
@@ -238,4 +235,62 @@ private fun Delta(v: Long, upIsGood: Boolean, percent: Boolean = false) {
     val c = if (v == 0L) MaterialTheme.colorScheme.onSurfaceVariant else if (good) extra.income else extra.expense
     Text((if (v >= 0) "▲ " else "▼ ") + (if (percent) fa(kotlin.math.abs(v).toInt()) + "٪ نسبت به ماه قبل" else money(v) + " نسبت به ماه قبل"),
         style = MaterialTheme.typography.labelSmall, color = c)
+}
+
+
+/** One card's month as its own tile: colour badge, bank and balance, an in/out split bar, and three numbers. Tap opens the card. */
+@Composable
+private fun CardMonthTile(r: CardReport, card: Card?, onClick: () -> Unit, modifier: Modifier) {
+    val ex = extra
+    val base = Color(card?.color ?: 0xFF14304F)
+    val shape = RoundedCornerShape(26.dp)
+    val change = r.closing - r.opening
+    Column(
+        modifier.fillMaxWidth().clip(shape).background(MaterialTheme.colorScheme.surface).border(1.dp, MaterialTheme.colorScheme.outline, shape)
+            .pressScale(onClick).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Box(
+                Modifier.size(46.dp).clip(RoundedCornerShape(16.dp)).background(Brush.linearGradient(listOf(lerp(base, Color.White, .15f), lerp(base, Color.Black, .40f)))),
+                contentAlignment = Alignment.Center,
+            ) { Icon(Icons.Rounded.CreditCard, null, tint = Color.White, modifier = Modifier.size(24.dp)) }
+            Column(Modifier.weight(1f)) {
+                Text(card?.bank?.ifBlank { null } ?: r.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(
+                    listOf(r.name.takeIf { card?.bank?.isNotBlank() == true }, card?.purpose?.takeIf { it.isNotBlank() && it != r.name }).filterNotNull().joinToString(" · "),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
+                )
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text("مانده‌ی پایان ماه", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                AnimatedMoney(r.closing, MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+            }
+        }
+        if (r.inn + r.out > 0) {
+            Row(Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(99.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
+                if (r.inn > 0) Box(Modifier.weight(r.inn.toFloat()).fillMaxHeight().background(ex.income))
+                if (r.out > 0) Box(Modifier.weight(r.out.toFloat()).fillMaxHeight().background(ex.expense))
+            }
+        }
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), verticalAlignment = Alignment.CenterVertically) {
+            MiniStat("شروع ماه", money(r.opening), MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
+            Box(Modifier.width(1.dp).fillMaxHeight().background(MaterialTheme.colorScheme.outline))
+            MiniStat("ورودی", "+" + money(r.inn), ex.income, Modifier.weight(1f))
+            Box(Modifier.width(1.dp).fillMaxHeight().background(MaterialTheme.colorScheme.outline))
+            MiniStat("خروجی", "−" + money(r.out), ex.expense, Modifier.weight(1f))
+        }
+        if (r.inn + r.out > 0) {
+            val up = change >= 0
+            StatusPill((if (up) "▲ " else "▼ ") + money(kotlin.math.abs(change)) + " تغییر در این ماه", if (up) ex.incomeBg else ex.expenseBg, if (up) ex.income else ex.expense)
+        } else Text("در این ماه حرکتی نداشته", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun MiniStat(label: String, value: String, color: Color, modifier: Modifier) {
+    Column(modifier.padding(horizontal = 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = color, maxLines = 1)
+    }
 }
