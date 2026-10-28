@@ -49,7 +49,8 @@ fun CardSheet(cu: CardUi, s: UiState, onEdit: () -> Unit, onDismiss: () -> Unit)
         onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp), containerColor = MaterialTheme.colorScheme.background,
     ) {
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        // fixed height: switching filters must not resize the sheet; only the list below scrolls
+        Column(Modifier.fillMaxWidth().fillMaxHeight(.92f).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Column(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(Brush.linearGradient(listOf(lerp(base, Color.White, .12f), lerp(base, Color.Black, .42f)))).padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -77,10 +78,12 @@ fun CardSheet(cu: CardUi, s: UiState, onEdit: () -> Unit, onDismiss: () -> Unit)
                     FilterChip(filter == f, { filter = f }, { Text(f.label) }, shape = RoundedCornerShape(99.dp))
                 }
             }
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             if (shown.isEmpty()) Surface2 { EmptyState("چیزی نیست", "برای این بخش تراکنشی ثبت نشده.") }
             else Surface2 { shown.take(60).forEach { TxRow(it) } }
             if (shown.size > 60) Text("۶۰ مورد آخر نمایش داده شد؛ بقیه در «تراکنش‌ها».", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             OutlinedButton(onEdit, Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) { Text("ویرایش کارت") }
+            }
         }
     }
 }
