@@ -169,6 +169,13 @@ private fun GapCard(g: GapUi, s: UiState, vm: MainVm, snoozed: Boolean, modifier
                 (if (less) "یک خروج پول ثبت نشده (پیامکش نرسیده یا کارمزد بوده)." else "یک ورودی پول ثبت نشده (پیامکش نرسیده)."),
             color = ex.warn, style = MaterialTheme.typography.bodySmall,
         )
+        // typical mistake: the opening balance was typed after a deposit/withdrawal that the program then counted again
+        val suspect = remember(g.gap, s.txs) { s.txs.firstOrNull { it.tx.id in g.gap.span && it.tx.balanceAfter != null && app.malino.core.Ledger.effect(it.tx) == -g.gap.diff } }
+        if (suspect != null) {
+            Text("پیشنهاد: اختلاف دقیقاً برابر تراکنش «${suspect.categoryName ?: if (suspect.tx.type == TxType.IN) "واریز" else "برداشت"}» ${money(suspect.tx.amount)} ریال (${dayLabel(suspect.tx.at)} ${clock(suspect.tx.at)}) است. احتمالاً موجودی اولیه‌ی کارت بعد از آن وارد شده و دوبار حساب شده.",
+                color = ex.warn, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+            Button({ vm.moveStartAfter(suspect.tx.id) }, colors = ButtonDefaults.buttonColors(containerColor = ex.warn, contentColor = ex.warnBg)) { Text("شروع کارت را بعد از آن بگذار") }
+        }
         if (!open) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button({ open = true }, colors = ButtonDefaults.buttonColors(containerColor = ex.warn, contentColor = ex.warnBg)) { Text("تعیین تکلیف") }

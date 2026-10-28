@@ -192,6 +192,7 @@ class MainVm(app: Application) : AndroidViewModel(app) {
     fun deleteTx(id: String) = io { repo.deleteTx(id) }
     fun saveCard(c: Card) = io { repo.saveCard(c) }
     fun resolveGap(g: Ledger.Gap, type: TxType, cat: String?, note: String, at: Long) = io { repo.resolveGap(g, type, cat, note, at) }
+    fun moveStartAfter(txId: String) = io { repo.moveStartAfter(txId) }
     fun snoozeGap(txId: String, on: Boolean) = repo.snoozeGap(txId, on)
     fun unlink(txId: String) = io { repo.unlinkTransfer(txId) }
     fun dismissRaw(id: String) = io { repo.dismissRaw(id) }

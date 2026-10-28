@@ -217,7 +217,7 @@ fun CardDialog(card: Card?, newId: () -> String, onSave: (Card) -> Unit, onDelet
             TextButton(enabled = name.isNotBlank(), onClick = {
                 val d = Jalali.fromMillis(openingAt).date
                 onSave(Card(card?.id ?: newId(), name.trim(), bank.trim(), last4, key, purpose.trim(), color, opening.toLongOrNull() ?: 0,
-                    if (dateChanged || (isNew && card == null)) Jalali.toMillis(d.y, d.m, d.d) else openingAt))
+                    if (dateChanged || (isNew && card == null)) startOf(d) else openingAt))
                 onDismiss()
             }) { Text("ذخیره", fontWeight = FontWeight.Bold) }
         },
@@ -226,6 +226,9 @@ fun CardDialog(card: Card?, newId: () -> String, onSave: (Card) -> Unit, onDelet
         },
     )
     if (pick) JalaliPickerDialog(Jalali.fromMillis(openingAt).date, { pick = false }) { d ->
-        openingAt = Jalali.toMillis(d.y, d.m, d.d); dateChanged = true; pick = false
+        openingAt = startOf(d); dateChanged = true; pick = false
     }
 }
+
+/** Opening balance "as of" a day: today means right now (so today's messages are not counted twice); other days start at midnight. */
+private fun startOf(d: Jalali.Date): Long = if (d == Jalali.today()) System.currentTimeMillis() else Jalali.toMillis(d.y, d.m, d.d)

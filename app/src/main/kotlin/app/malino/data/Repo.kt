@@ -177,6 +177,14 @@ class Repo(ctx: Context) {
         ImportResult(fresh.size, dup)
     }
 
+    /** The opening balance was entered after this message: restart the card from it (balance = the bank balance it reported). */
+    suspend fun moveStartAfter(txId: String) {
+        val t = db.tx().get(txId)?.toCore() ?: return
+        val bal = t.balanceAfter ?: return
+        val card = db.cards().all().firstOrNull { it.id == t.cardId }?.toCore() ?: return
+        db.cards().upsert(card.copy(openingAt = t.at + 1, openingBalance = bal).toE())
+    }
+
     enum class Reset { AllTx, TxRange, Learned, Log, Plan, Everything }
 
     /** Destructive clean-ups offered in settings (the caller makes a safety backup first). [to] is exclusive. */
