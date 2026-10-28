@@ -16,7 +16,7 @@ fun OnboardingScreen(vm: MainVm, onDone: () -> Unit, onCheck: () -> Unit) {
     val ctx = LocalContext.current
     var perms by remember { mutableStateOf(readPerms(ctx)) }
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 24.dp).systemBarsPadding(),
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).systemBarsPadding().padding(horizontal = 16.dp, vertical = 24.dp).padding(bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Column(Modifier.enter(0), verticalArrangement = Arrangement.spacedBy(4.dp)) {

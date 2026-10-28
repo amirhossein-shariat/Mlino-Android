@@ -37,8 +37,8 @@ private fun PageHeader(title: String, onClose: () -> Unit) {
 @Composable
 private fun AmountField(value: String, onChange: (String) -> Unit, label: String, modifier: Modifier = Modifier) {
     OutlinedTextField(
-        value, { onChange(digitsOnly(it)) }, modifier.fillMaxWidth(), singleLine = true, label = { Text(label) },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        value, { onChange(digitsOnly(it).take(14)) }, modifier.fillMaxWidth(), singleLine = true, label = { Text(label) },
+        visualTransformation = ThousandsTransformation, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         supportingText = { if (value.isNotEmpty()) Text(money(value.toLongOrNull() ?: 0) + " ریال") },
     )
 }

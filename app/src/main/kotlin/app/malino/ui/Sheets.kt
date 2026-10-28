@@ -182,10 +182,11 @@ fun CardDialog(card: Card?, newId: () -> String, onSave: (Card) -> Unit, onDelet
                 OutlinedTextField(key, { key = Jalali.toEn(it).trim() }, label = { Text("شناسه‌ی پیام (شماره حساب داخل پیامک، یا blu)") }, supportingText = {
                     Text("پیامک پارسیان: شماره‌ی بالای پیام. اعلان بلو: blu")
                 })
-                OutlinedTextField(opening, { opening = digits(it) }, label = { Text("موجودی اولیه (ریال)") }, singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                OutlinedTextField(opening, { opening = digits(it).take(14) }, label = { Text("موجودی اولیه (ریال)") }, singleLine = true,
+                    visualTransformation = ThousandsTransformation, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    supportingText = { if (opening.isNotEmpty()) Text(money(opening.toLongOrNull() ?: 0) + " ریال") })
                 OutlinedButton({ pick = true }) { Text("از تاریخ " + fullDate(openingAt)) }
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(Modifier.padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     SWATCHES.forEach { c ->
                         val sc by animateFloatAsState(if (color == c) 1.2f else 1f, spring(dampingRatio = 0.5f), label = "sw")
                         Box(Modifier.size(30.dp).graphicsLayer { scaleX = sc; scaleY = sc }.clip(CircleShape).background(Color(c)).pressScale { color = c })
