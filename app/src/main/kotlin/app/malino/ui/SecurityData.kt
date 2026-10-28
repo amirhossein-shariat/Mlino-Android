@@ -2,6 +2,7 @@ package app.malino.ui
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -26,11 +27,12 @@ import java.io.File
 // ================= Security =================
 
 @Composable
-private fun PinDialog(title: String, askRepeat: Boolean, onDismiss: () -> Unit, onPin: (String) -> Unit) {
+fun PinDialog(title: String, askRepeat: Boolean, onDismiss: () -> Unit, exactLen: Int? = null, onPin: (String) -> Unit) {
     var a by remember { mutableStateOf("") }
     var b by remember { mutableStateOf("") }
     val err = when {
-        a.isNotEmpty() && !Pin.isValid(a) -> "پین باید ${fa(Pin.MIN_LEN)} تا ${fa(Pin.MAX_LEN)} رقم باشد"
+        exactLen != null && a.isNotEmpty() && a.length != exactLen -> "پین باید ${fa(exactLen)} رقم باشد"
+        exactLen == null && a.isNotEmpty() && !Pin.isValid(a) -> "پین باید ${fa(Pin.MIN_LEN)} تا ${fa(Pin.MAX_LEN)} رقم باشد"
         askRepeat && b.isNotEmpty() && a != b -> "دو پین یکسان نیست"
         else -> null
     }
@@ -38,14 +40,14 @@ private fun PinDialog(title: String, askRepeat: Boolean, onDismiss: () -> Unit, 
         onDismissRequest = onDismiss, title = { Text(title) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(a, { a = digitsOnly(it).take(Pin.MAX_LEN) }, singleLine = true, label = { Text("پین") }, visualTransformation = PasswordVisualTransformation(),
+                OutlinedTextField(a, { a = digitsOnly(it).take(exactLen ?: Pin.MAX_LEN) }, singleLine = true, label = { Text("پین") }, visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
-                if (askRepeat) OutlinedTextField(b, { b = digitsOnly(it).take(Pin.MAX_LEN) }, singleLine = true, label = { Text("تکرار پین") }, visualTransformation = PasswordVisualTransformation(),
+                if (askRepeat) OutlinedTextField(b, { b = digitsOnly(it).take(exactLen ?: Pin.MAX_LEN) }, singleLine = true, label = { Text("تکرار پین") }, visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
                 if (err != null) Text(err, color = extra.expense, style = MaterialTheme.typography.bodySmall)
             }
         },
-        confirmButton = { TextButton(enabled = Pin.isValid(a) && (!askRepeat || a == b), onClick = { onPin(a) }) { Text("تأیید", fontWeight = FontWeight.Bold) } },
+        confirmButton = { TextButton(enabled = Pin.isValid(a) && (exactLen == null || a.length == exactLen) && (!askRepeat || a == b), onClick = { onPin(a) }) { Text("تأیید", fontWeight = FontWeight.Bold) } },
         dismissButton = { TextButton(onDismiss) { Text("انصراف") } },
     )
 }
@@ -219,7 +221,7 @@ fun DataPage(s: UiState, vm: MainVm, onClose: () -> Unit, modifier: Modifier = M
         }
     }
 
-    resetAsk?.let { ask -> ResetDialog(ask, onDismiss = { resetAsk = null }) { kind, from, to -> resetAsk = null; vm.reset(ctx, kind, from, to) } }
+    resetAsk?.let { ask -> ResetDialog(ask, s, onDismiss = { resetAsk = null }) { kind, from, to -> resetAsk = null; vm.reset(ctx, kind, from, to) } }
     confirmRestore?.let { go ->
         AlertDialog(
             onDismissRequest = { confirmRestore = null }, title = { Text("بازیابی پشتیبان؟") },
@@ -257,29 +259,43 @@ private enum class ResetAsk(val title: String, val body: String, val kind: app.m
 }
 
 @Composable
-private fun ResetDialog(ask: ResetAsk, onDismiss: () -> Unit, onGo: (app.malino.data.Repo.Reset, Long, Long) -> Unit) {
+private fun ResetDialog(ask: ResetAsk, s: UiState, onDismiss: () -> Unit, onGo: (app.malino.data.Repo.Reset, Long, Long) -> Unit) {
     val today = remember { Jalali.today() }
     var from by remember { mutableStateOf(Jalali.addDays(today, -30)) }
     var to by remember { mutableStateOf(today) }
     var pick by remember { mutableIntStateOf(0) }
     var typed by remember { mutableStateOf("") }
     val hard = ask == ResetAsk.Everything
+    var understood by remember { mutableStateOf(false) }
+    val fromMs = Jalali.toMillis(from.y, from.m, from.d); val toMs = Jalali.toMillis(to.y, to.m, to.d) + 86_400_000L
+    val affected = when (ask) {
+        ResetAsk.Range -> "${fa(s.coreTxs.count { it.at in fromMs until toMs })} تراکنش حذف می‌شود."
+        ResetAsk.AllTx -> "${fa(s.coreTxs.size)} تراکنش حذف می‌شود."
+        ResetAsk.Everything -> "${fa(s.cards.size)} کارت و ${fa(s.coreTxs.size)} تراکنش حذف می‌شود."
+        else -> null
+    }
     AlertDialog(
         onDismissRequest = onDismiss, title = { Text(ask.title) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("⚠️ این کار برگشت‌ناپذیر است (جز با نسخه‌ی ایمنی خودکار که قبلش گرفته می‌شود).", color = extra.expense, fontWeight = FontWeight.Medium)
                 Text(ask.body)
+                affected?.let { Text(it, fontWeight = FontWeight.Bold) }
                 if (ask == ResetAsk.Range) {
                     OutlinedButton({ pick = 1 }) { Text("از " + Jalali.format(from)) }
                     OutlinedButton({ pick = 2 }) { Text("تا " + Jalali.format(to) + " (همان روز هم حذف می‌شود)") }
+                }
+                Row(Modifier.fillMaxWidth().clickable { understood = !understood }, verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(understood, { understood = it })
+                    Text("متوجه‌ام و تأیید می‌کنم", style = MaterialTheme.typography.bodyMedium)
                 }
                 if (hard) OutlinedTextField(typed, { typed = it }, singleLine = true, label = { Text("برای تأیید بنویسید: ریست") })
             }
         },
         confirmButton = {
             TextButton(
-                { onGo(ask.kind, Jalali.toMillis(from.y, from.m, from.d), Jalali.toMillis(to.y, to.m, to.d) + 86_400_000L) },
-                enabled = (!hard || typed.trim() == "ریست") && (ask != ResetAsk.Range || Jalali.toMillis(from.y, from.m, from.d) <= Jalali.toMillis(to.y, to.m, to.d)),
+                { onGo(ask.kind, fromMs, toMs) },
+                enabled = understood && (!hard || typed.trim() == "ریست") && (ask != ResetAsk.Range || fromMs <= Jalali.toMillis(to.y, to.m, to.d)),
             ) { Text("حذف", fontWeight = FontWeight.Bold) }
         },
         dismissButton = { TextButton(onDismiss) { Text("انصراف") } },

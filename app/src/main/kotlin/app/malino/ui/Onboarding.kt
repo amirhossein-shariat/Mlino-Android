@@ -37,7 +37,21 @@ fun OnboardingScreen(vm: MainVm, onDone: () -> Unit, onCheck: () -> Unit) {
             PermissionChecklist(perms, null, null) { perms = readPerms(ctx) }
             RestrictedHelp()
         }
-        Column(Modifier.enter(3), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        var pinSet by remember { mutableStateOf(vm.security.enabled) }
+        var askPin by remember { mutableStateOf(false) }
+        Surface2(Modifier.enter(3)) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("قفل برنامه با پین ۴ رقمی (اختیاری)", fontWeight = FontWeight.Bold)
+                Text("با پین، فقط خودتان وارد برنامه می‌شوید. هر وقت خواستید از «تنظیمات ← امنیت و قفل» پین را تغییر یا حذف کنید؛ برنامه بدون رمز هم کامل کار می‌کند.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (pinSet) Text("پین تنظیم شد ✓", color = extra.income, fontWeight = FontWeight.Medium)
+                OutlinedButton({ askPin = true }) { Text(if (pinSet) "تغییر پین" else "تعیین پین ۴ رقمی") }
+            }
+        }
+        if (askPin) PinDialog("پین ۴ رقمی جدید", true, { askPin = false }, exactLen = 4) { pin ->
+            vm.security.setPin(pin); vm.refreshLock(); pinSet = true; askPin = false
+        }
+        Column(Modifier.enter(4), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Button({ vm.onboarded = true; onDone() }, Modifier.fillMaxWidth()) { Text(if (perms.ok) "ورود به برنامه" else "بعداً، ورود به برنامه") }
             OutlinedButton({ vm.onboarded = true; onCheck() }, Modifier.fillMaxWidth()) { Text("بررسی ثبت خودکار") }
         }
