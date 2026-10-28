@@ -29,10 +29,14 @@ jobs:
         run: |
           set -o pipefail
           ./gradlew :app:assembleDebug --no-daemon --console=plain 2>&1 | tee app.log
+      - name: Release APK (R8 + resource shrinking, unsigned)
+        run: |
+          set -o pipefail
+          ./gradlew :app:assembleRelease --no-daemon --console=plain 2>&1 | tee release.log
       - name: Error summary
         if: failure()
         run: |
-          cat core.log app.log 2>/dev/null | grep -E -A4 '^e: |What went wrong' | grep -v 'AndroidX dependencies' | grep -v 'debugRuntimeClasspath' | head -50
+          cat core.log app.log release.log 2>/dev/null | grep -E -A4 '^e: |What went wrong' | grep -v 'AndroidX dependencies' | grep -v 'debugRuntimeClasspath' | head -50
       - uses: actions/upload-artifact@v4
         with:
           name: malino-debug-apk
@@ -42,11 +46,12 @@ jobs:
         run: |
           set -e
           mkdir /tmp/out && cp app/build/outputs/apk/debug/*.apk /tmp/out/malino-debug.apk
+          cp app/build/outputs/apk/release/*.apk /tmp/out/malino-release-unsigned.apk
           cd /tmp/out
           git init -q -b builds
           git config user.name "github-actions"
           git config user.email "actions@users.noreply.github.com"
-          git add malino-debug.apk
+          git add malino-debug.apk malino-release-unsigned.apk
           git commit -q -m "malino-debug.apk from ${GITHUB_SHA}"
           git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" builds
       - uses: actions/upload-artifact@v4
