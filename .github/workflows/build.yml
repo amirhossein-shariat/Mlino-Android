@@ -29,7 +29,7 @@ jobs:
       - name: Error summary
         if: failure()
         run: |
-          cat core.log app.log 2>/dev/null | grep -E '^e: |error:|What went wrong|Execution failed|FAILED' | awk '!seen[$0]++' | head -60
+          cat core.log app.log 2>/dev/null | grep -E -A4 '^e: |What went wrong' | grep -v 'AndroidX dependencies' | grep -v 'debugRuntimeClasspath' | head -50
       - uses: actions/upload-artifact@v4
         with:
           name: mlino-debug-apk
