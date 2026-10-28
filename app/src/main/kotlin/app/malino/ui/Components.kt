@@ -1,11 +1,23 @@
 package app.malino.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AccountBalance
 import androidx.compose.material.icons.rounded.ArrowDownward
+import androidx.compose.material.icons.rounded.BusinessCenter
+import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.rounded.DirectionsCar
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.LocalHospital
+import androidx.compose.material.icons.rounded.MoreHoriz
+import androidx.compose.material.icons.rounded.Payments
+import androidx.compose.material.icons.rounded.Receipt
+import androidx.compose.material.icons.rounded.Restaurant
+import androidx.compose.material.icons.rounded.ShoppingBag
 import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material3.*
@@ -24,13 +36,32 @@ fun typeLabel(t: TxType) = when (t) {
     TxType.OUT -> "برداشت"; TxType.IN -> "واریز"; TxType.FEE -> "کارمزد"; TxType.ADJUST -> "تعدیل"; TxType.TRANSFER -> "انتقال بین کارت‌ها"
 }
 
+fun catIcon(id: String?): ImageVector? = when (id) {
+    "food" -> Icons.Rounded.Restaurant
+    "transport" -> Icons.Rounded.DirectionsCar
+    "shopping" -> Icons.Rounded.ShoppingBag
+    "bills" -> Icons.Rounded.Receipt
+    "health" -> Icons.Rounded.LocalHospital
+    "family" -> Icons.Rounded.Favorite
+    "biz_cost" -> Icons.Rounded.BusinessCenter
+    "fee" -> Icons.Rounded.AccountBalance
+    "invoice" -> Icons.Rounded.Description
+    "salary" -> Icons.Rounded.Payments
+    "other_out", "other_in" -> Icons.Rounded.MoreHoriz
+    else -> null
+}
+
 @Composable
 fun SectionTitle(text: String, modifier: Modifier = Modifier) =
     Text(text, style = MaterialTheme.typography.titleMedium, modifier = modifier.padding(horizontal = 4.dp))
 
 @Composable
 fun Surface2(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) =
-    Column(modifier.clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surface), content = content)
+    Column(
+        modifier.clip(RoundedCornerShape(26.dp)).background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(26.dp)),
+        content = content,
+    )
 
 @Composable
 fun IconBadge(icon: ImageVector, bg: Color, fg: Color, size: Int = 42) =
@@ -43,8 +74,8 @@ fun TxRow(u: TxUi, modifier: Modifier = Modifier) {
     val t = u.tx
     val ex = extra
     val (icon, bg, fg) = when (t.type) {
-        TxType.IN -> Triple(Icons.Rounded.ArrowDownward, ex.incomeBg, ex.income)
-        TxType.OUT, TxType.FEE -> Triple(Icons.Rounded.ArrowUpward, ex.expenseBg, ex.expense)
+        TxType.IN -> Triple(catIcon(t.categoryId) ?: Icons.Rounded.ArrowDownward, ex.incomeBg, ex.income)
+        TxType.OUT, TxType.FEE -> Triple(catIcon(t.categoryId) ?: Icons.Rounded.ArrowUpward, ex.expenseBg, ex.expense)
         TxType.TRANSFER -> Triple(Icons.Rounded.SwapHoriz, MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.secondary)
         TxType.ADJUST -> Triple(if (t.amount >= 0) Icons.Rounded.ArrowDownward else Icons.Rounded.ArrowUpward,
             MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)

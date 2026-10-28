@@ -17,6 +17,10 @@ class Repo(ctx: Context) {
     val attention: Flow<List<RawE>> = db.raw().observeAttention()
     val recentRaw: Flow<List<RawE>> = db.raw().observeRecent()
 
+    var hideBalance: Boolean
+        get() = prefs.getBoolean("hide_balance", false)
+        set(v) { prefs.edit().putBoolean("hide_balance", v).apply() }
+
     var onboarded: Boolean
         get() = prefs.getBoolean("onboarded", false)
         set(v) { prefs.edit().putBoolean("onboarded", v).apply() }

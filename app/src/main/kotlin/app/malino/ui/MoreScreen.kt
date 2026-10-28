@@ -22,7 +22,7 @@ fun MoreScreen(s: UiState, vm: MainVm, perms: Perms, onOpenCheck: () -> Unit, on
     val imported by vm.importedCount.collectAsState()
 
     LazyColumn(modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 120.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        item { Text("بیشتر", style = MaterialTheme.typography.titleLarge, modifier = Modifier.enter(0)) }
+        item { Text("تنظیمات", style = MaterialTheme.typography.titleLarge, modifier = Modifier.enter(0)) }
 
         item { SectionTitle("ثبت خودکار", Modifier.enter(1)) }
         item {

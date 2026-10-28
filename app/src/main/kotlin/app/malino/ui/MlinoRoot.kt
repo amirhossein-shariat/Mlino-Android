@@ -2,19 +2,27 @@ package app.malino.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
-import androidx.compose.foundation.background
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -23,52 +31,31 @@ import app.malino.core.Card
 import app.malino.core.Tx
 
 private enum class Tab(val label: String, val icon: ImageVector) {
-    Home("خانه", Icons.Rounded.Home), Inbox("صندوق", Icons.Rounded.Inbox), Tx("تراکنش‌ها", Icons.Rounded.ReceiptLong),
-    Reports("گزارش", Icons.Rounded.BarChart), More("بیشتر", Icons.Rounded.GridView)
+    Home("خانه", Icons.Rounded.Home), Tx("تراکنش‌ها", Icons.Rounded.ReceiptLong), Inbox("صندوق", Icons.Rounded.Inbox),
+    Reports("گزارش", Icons.Rounded.BarChart), More("تنظیمات", Icons.Rounded.Settings)
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MalinoRoot(vm: MainVm = viewModel()) {
-    MalinoTheme {
+fun MlinoRoot(vm: MainVm = viewModel()) {
+    MlinoTheme {
         val ctx = LocalContext.current
         val s by vm.state.collectAsStateWithLifecycle()
+        val hidden by vm.hideBalance.collectAsStateWithLifecycle()
         var tab by rememberSaveable { mutableStateOf(Tab.Home) }
         var perms by remember { mutableStateOf(readPerms(ctx)) }
         LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { perms = readPerms(ctx) }
         var onboarded by remember { mutableStateOf(vm.onboarded) }
         var showCheck by rememberSaveable { mutableStateOf(false) }
         var sheetTx by remember { mutableStateOf<Tx?>(null) }
+        var sheetKind by remember { mutableIntStateOf(0) }
         var showSheet by remember { mutableStateOf(false) }
         var editCard by remember { mutableStateOf<Card?>(null) }
         var showCard by remember { mutableStateOf(false) }
-        val snack = remember { SnackbarHostState() }
+        fun add(kind: Int) { sheetTx = null; sheetKind = kind; showSheet = true }
 
-        Scaffold(
-            containerColor = MaterialTheme.colorScheme.background,
-            snackbarHost = { SnackbarHost(snack) },
-            floatingActionButton = {
-                AnimatedVisibility(tab == Tab.Home || tab == Tab.Tx, enter = scaleIn(spring(0.55f, Spring.StiffnessMedium)) + fadeIn(), exit = scaleOut() + fadeOut()) {
-                    FloatingActionButton({ sheetTx = null; showSheet = true }, containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary) {
-                        Icon(Icons.Rounded.Add, "تراکنش جدید")
-                    }
-                }
-            },
-            bottomBar = {
-                NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
-                    Tab.entries.forEach { t ->
-                        NavigationBarItem(
-                            selected = tab == t, onClick = { tab = t }, label = { Text(t.label) },
-                            icon = {
-                                BadgedBox({ if (t == Tab.Inbox && s.inbox.size + s.gaps.size > 0) Badge { Text(fa(s.inbox.size + s.gaps.size)) } }) { Icon(t.icon, t.label) }
-                            },
-                        )
-                    }
-                }
-            },
-        ) { pad ->
+        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
             AnimatedContent(
-                targetState = tab, modifier = Modifier.padding(pad).fillMaxSize(),
+                targetState = tab, modifier = Modifier.fillMaxSize(),
                 transitionSpec = {
                     val dir = if (targetState.ordinal > initialState.ordinal) 1 else -1
                     (fadeIn(tween(240, 60)) + slideInHorizontally(spring(0.85f, Spring.StiffnessMediumLow)) { -it / 10 * dir } + scaleIn(tween(240), 0.97f)) togetherWith
@@ -76,13 +63,15 @@ fun MalinoRoot(vm: MainVm = viewModel()) {
                 }, label = "tabs",
             ) { t ->
                 when (t) {
-                    Tab.Home -> HomeScreen(s, !perms.ok, goInbox = { tab = Tab.Inbox }, goMore = { tab = Tab.More })
+                    Tab.Home -> HomeScreen(s, hidden, vm::toggleHide, !perms.ok, goInbox = { tab = Tab.Inbox }, goMore = { tab = Tab.More },
+                        goTx = { tab = Tab.Tx }, goReports = { tab = Tab.Reports }, onAdd = ::add)
                     Tab.Inbox -> InboxScreen(s, vm)
                     Tab.Tx -> TxScreen(s, onEdit = { sheetTx = it; showSheet = true })
-                    Tab.Reports -> ReportsScreen(s)
-                    Tab.More -> MoreScreen(s, vm, perms, onOpenCheck = { showCheck = true }, onEditCard = { editCard = it; showCard = true })
+                    Tab.Reports -> ReportsScreen(s, Modifier.statusBarsPadding())
+                    Tab.More -> MoreScreen(s, vm, perms, onOpenCheck = { showCheck = true }, onEditCard = { editCard = it; showCard = true }, modifier = Modifier.statusBarsPadding())
                 }
             }
+            FloatingNav(tab, s.inbox.size + s.gaps.size, onTab = { tab = it }, onAdd = { add(0) }, modifier = Modifier.align(Alignment.BottomCenter))
         }
 
         AnimatedVisibility(showCheck, enter = slideInVertically(spring(0.9f, Spring.StiffnessMediumLow)) { it / 3 } + fadeIn(), exit = slideOutVertically { it / 3 } + fadeOut()) {
@@ -97,8 +86,47 @@ fun MalinoRoot(vm: MainVm = viewModel()) {
             }
         }
 
-        if (showSheet) TxSheet(s, sheetTx, vm::newId, vm::saveTx, vm::deleteTx) { showSheet = false }
+        if (showSheet) TxSheet(s, sheetTx, sheetKind, vm::newId, vm::saveTx, vm::deleteTx) { showSheet = false }
         if (showCard) CardDialog(editCard, vm::newId, vm::saveCard,
             onDelete = editCard?.let { c -> { vm.deleteCard(c) { }; showCard = false } }) { showCard = false }
+    }
+}
+
+/** Pill-shaped bar floating above the content: the selected tab widens to show its label; the add button is raised in the middle. */
+@Composable
+private fun FloatingNav(tab: Tab, badge: Int, onTab: (Tab) -> Unit, onAdd: () -> Unit, modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(30.dp)
+    Box(modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 14.dp).padding(bottom = 14.dp)) {
+        Row(
+            Modifier.fillMaxWidth().padding(top = 22.dp).height(68.dp)
+                .shadow(14.dp, shape, ambientColor = Color(0x33000000), spotColor = Color(0x33000000))
+                .background(MaterialTheme.colorScheme.surface, shape).border(1.dp, MaterialTheme.colorScheme.outline, shape).padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(Modifier.weight(1f)) { NavItem(Tab.Home, tab == Tab.Home, 0) { onTab(Tab.Home) }; NavItem(Tab.Tx, tab == Tab.Tx, 0) { onTab(Tab.Tx) } }
+            Spacer(Modifier.width(70.dp))
+            Row(Modifier.weight(1f)) { NavItem(Tab.Inbox, tab == Tab.Inbox, badge) { onTab(Tab.Inbox) }; NavItem(Tab.Reports, tab == Tab.Reports, 0) { onTab(Tab.Reports) } }
+        }
+        Box(
+            Modifier.align(Alignment.TopCenter).padding(top = 1.dp).size(58.dp)
+                .shadow(12.dp, RoundedCornerShape(21.dp), ambientColor = extra.accent, spotColor = extra.accent)
+                .background(extra.accent, RoundedCornerShape(21.dp)).pressScale(onAdd),
+            contentAlignment = Alignment.Center,
+        ) { Icon(Icons.Rounded.Add, "تراکنش جدید", tint = extra.accentInk, modifier = Modifier.size(28.dp)) }
+    }
+}
+
+@Composable
+private fun RowScope.NavItem(t: Tab, selected: Boolean, badge: Int, onClick: () -> Unit) {
+    val w by animateFloatAsState(if (selected) 2.1f else 1f, spring(0.8f, Spring.StiffnessMediumLow), label = "w")
+    val bg by animateColorAsState(if (selected) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent, label = "bg")
+    val fg by animateColorAsState(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, label = "fg")
+    Box(Modifier.weight(w).height(52.dp).clip(RoundedCornerShape(22.dp)).background(bg).pressScale(onClick), contentAlignment = Alignment.Center) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            BadgedBox({ if (badge > 0) Badge { Text(fa(badge)) } }) { Icon(t.icon, t.label, tint = fg) }
+            AnimatedVisibility(selected, enter = fadeIn() + expandHorizontally(), exit = fadeOut() + shrinkHorizontally()) {
+                Text(t.label, color = fg, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium, maxLines = 1)
+            }
+        }
     }
 }

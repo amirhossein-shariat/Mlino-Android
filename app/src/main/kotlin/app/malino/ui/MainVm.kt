@@ -67,6 +67,8 @@ class MainVm(app: Application) : AndroidViewModel(app) {
 
     val recentRaw: StateFlow<List<RawE>> = repo.recentRaw.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val stats get() = repo.stats
+    val hideBalance = MutableStateFlow(repo.hideBalance)
+    fun toggleHide() { hideBalance.value = !hideBalance.value; repo.hideBalance = hideBalance.value }
     var onboarded: Boolean
         get() = repo.onboarded
         set(v) { repo.onboarded = v }

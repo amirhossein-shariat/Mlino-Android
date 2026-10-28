@@ -14,6 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -146,3 +148,22 @@ fun ShareBar(fraction: Float, color: Color, modifier: Modifier = Modifier) {
 }
 
 fun shortMonth(m: Int) = Jalali.MONTHS[m - 1]
+
+/** A checkmark that draws itself; shown when the inbox is empty. */
+@Composable
+fun AnimatedCheck(modifier: Modifier = Modifier) {
+    val p = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { p.animateTo(1f, tween(700, 150, FastOutSlowInEasing)) }
+    val bg = extra.incomeBg
+    val fg = extra.income
+    Canvas(modifier.size(84.dp)) {
+        drawCircle(bg)
+        val path = Path().apply {
+            moveTo(size.width * .31f, size.height * .51f); lineTo(size.width * .44f, size.height * .64f); lineTo(size.width * .69f, size.height * .37f)
+        }
+        val m = PathMeasure().apply { setPath(path, false) }
+        val seg = Path()
+        m.getSegment(0f, m.length * p.value, seg, true)
+        drawPath(seg, fg, style = Stroke(5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+    }
+}

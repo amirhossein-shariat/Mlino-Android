@@ -49,14 +49,14 @@ fun ReportsScreen(s: UiState, modifier: Modifier = Modifier) {
         item {
             Row(Modifier.enter(0), verticalAlignment = Alignment.CenterVertically) {
                 Text("گزارش ماهانه", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-                IconButton({ step(1) }, enabled = !isNow) { Icon(Icons.Rounded.ChevronLeft, "ماه بعد") }
+                IconButton({ step(-1) }) { Icon(Icons.Rounded.ChevronRight, "ماه قبل") }
                 AnimatedContent(y * 12 + m, transitionSpec = {
                     val up = targetState > initialState
                     (fadeIn(tween(200)) + slideInVertically(tween(260)) { if (up) -it else it }) togetherWith (fadeOut(tween(120)) + slideOutVertically(tween(200)) { if (up) it else -it })
                 }, label = "month") { _ ->
                     Text(Jalali.MONTHS[m - 1] + " " + Jalali.toFa(y), style = MaterialTheme.typography.titleMedium, modifier = Modifier.widthIn(min = 110.dp), textAlign = TextAlign.Center)
                 }
-                IconButton({ step(-1) }) { Icon(Icons.Rounded.ChevronRight, "ماه قبل") }
+                IconButton({ step(1) }, enabled = !isNow) { Icon(Icons.Rounded.ChevronLeft, "ماه بعد") }
             }
         }
         if (cur == null) { item { Surface2 { EmptyState("در حال محاسبه…", "") } }; return@LazyColumn }
@@ -71,9 +71,9 @@ fun ReportsScreen(s: UiState, modifier: Modifier = Modifier) {
                         Text("درآمد و هزینه، ۶ ماه اخیر", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                         Legend(extra.income, "درآمد"); Spacer(Modifier.width(10.dp)); Legend(extra.expense, "هزینه")
                     }
-                    MonthBars(series.map { shortMonth(it.m) to (it.income to it.expense) }, series.lastIndex) { i ->
+                    MonthBars(series.map { shortMonth(it.m) to (it.income to it.expense) }, series.lastIndex, onSelect = { i ->
                         val r = series[i]; y = r.y; m = r.m
-                    }
+                    })
                 }
             }
         }
