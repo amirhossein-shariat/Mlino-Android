@@ -77,6 +77,11 @@ fun MalinoRoot(vm: MainVm = viewModel()) {
         var cardIsNew by remember { mutableStateOf(true) }
         var teachRaw by remember { mutableStateOf<app.malino.data.RawE?>(null) }
         var cardSheetId by remember { mutableStateOf<String?>(null) }
+        val tourTargets = remember { mutableMapOf<String, androidx.compose.ui.layout.LayoutCoordinates>() }
+        var tourStep by rememberSaveable { mutableIntStateOf(if (vm.tourDone) -1 else 0) }
+        LaunchedEffect(tourStep) {
+            if (tourStep >= 0) tab = if (TOUR_STEPS[tourStep].tab == TourTab.Inbox) Tab.Inbox else Tab.Home
+        }
         fun add(kind: Int) { sheetTx = null; sheetKind = kind; showSheet = true }
 
         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
@@ -90,14 +95,14 @@ fun MalinoRoot(vm: MainVm = viewModel()) {
             ) { t ->
                 when (t) {
                     Tab.Home -> HomeScreen(s, hidden, vm::toggleHide, !perms.ok, goInbox = { tab = Tab.Inbox }, goMore = { tab = Tab.More },
-                        goTx = { tab = Tab.Tx }, goReports = { tab = Tab.Reports }, onAdd = ::add, onPage = { page = it }, onCard = { cardSheetId = it.card.id })
+                        goTx = { tab = Tab.Tx }, goReports = { tab = Tab.Reports }, onAdd = ::add, onPage = { page = it }, onCard = { cardSheetId = it.card.id }, targets = tourTargets)
                     Tab.Inbox -> InboxScreen(s, vm, onTeach = { teachRaw = it }, onCardFrom = { r -> editCard = cardFromMessage(r); cardIsNew = true; showCard = true })
                     Tab.Tx -> TxScreen(s, onEdit = { sheetTx = it; showSheet = true })
                     Tab.Reports -> ReportsScreen(s, onCard = { cardSheetId = it }, modifier = Modifier.statusBarsPadding())
-                    Tab.More -> MoreScreen(s, vm, perms, onOpenCheck = { showCheck = true }, onPage = { page = it }, onOpenCard = { cardSheetId = it.id }, onEditCard = { editCard = it; cardIsNew = true; showCard = true }, modifier = Modifier.statusBarsPadding())
+                    Tab.More -> MoreScreen(s, vm, perms, onOpenCheck = { showCheck = true }, onPage = { page = it }, onOpenCard = { cardSheetId = it.id }, onEditCard = { editCard = it; cardIsNew = true; showCard = true }, onTour = { tab = Tab.Home; tourStep = 0 }, modifier = Modifier.statusBarsPadding())
                 }
             }
-            FloatingNav(tab, s.inbox.size + s.gaps.size, onTab = { tab = it }, onAdd = { add(0) }, modifier = Modifier.align(Alignment.BottomCenter))
+            FloatingNav(tab, s.inbox.size + s.gaps.size, onTab = { tab = it }, onAdd = { add(0) }, targets = tourTargets, modifier = Modifier.align(Alignment.BottomCenter))
         }
 
         AnimatedVisibility(page != null, enter = slideInVertically(spring(0.9f, Spring.StiffnessMediumLow)) { it / 3 } + fadeIn(), exit = slideOutVertically { it / 3 } + fadeOut()) {
@@ -132,6 +137,13 @@ fun MalinoRoot(vm: MainVm = viewModel()) {
             }
         }
 
+        if (onboarded && tourStep >= 0 && !(locked && lockOn)) {
+            BackHandler { tourStep = -1; vm.tourDone = true; tab = Tab.Home }
+            TourOverlay(tourStep, tourTargets,
+                onNext = { if (tourStep >= TOUR_STEPS.lastIndex) { tourStep = -1; vm.tourDone = true; tab = Tab.Home } else tourStep++ },
+                onSkip = { tourStep = -1; vm.tourDone = true; tab = Tab.Home })
+        }
+
         AnimatedVisibility(locked && lockOn, exit = fadeOut(tween(250))) {
             BackHandler { }
             LockScreen(vm, onUnlocked = { locked = false })
@@ -148,7 +160,7 @@ fun MalinoRoot(vm: MainVm = viewModel()) {
 
 /** Pill-shaped bar floating above the content: the selected tab widens to show its label; the add button is raised in the middle. */
 @Composable
-private fun FloatingNav(tab: Tab, badge: Int, onTab: (Tab) -> Unit, onAdd: () -> Unit, modifier: Modifier = Modifier) {
+private fun FloatingNav(tab: Tab, badge: Int, onTab: (Tab) -> Unit, onAdd: () -> Unit, targets: MutableMap<String, androidx.compose.ui.layout.LayoutCoordinates>, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(30.dp)
     Box(modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 14.dp).padding(bottom = 14.dp)) {
         Row(
@@ -159,10 +171,10 @@ private fun FloatingNav(tab: Tab, badge: Int, onTab: (Tab) -> Unit, onAdd: () ->
         ) {
             Row(Modifier.weight(1f)) { NavItem(Tab.Home, tab == Tab.Home, 0) { onTab(Tab.Home) }; NavItem(Tab.Tx, tab == Tab.Tx, 0) { onTab(Tab.Tx) } }
             Spacer(Modifier.width(70.dp))
-            Row(Modifier.weight(1f)) { NavItem(Tab.Inbox, tab == Tab.Inbox, badge) { onTab(Tab.Inbox) }; NavItem(Tab.Reports, tab == Tab.Reports, 0) { onTab(Tab.Reports) } }
+            Row(Modifier.weight(1f)) { NavItem(Tab.Inbox, tab == Tab.Inbox, badge, Modifier.tourTarget(targets, "inbox")) { onTab(Tab.Inbox) }; NavItem(Tab.Reports, tab == Tab.Reports, 0) { onTab(Tab.Reports) } }
         }
         Box(
-            Modifier.align(Alignment.TopCenter).padding(top = 1.dp).size(58.dp)
+            Modifier.align(Alignment.TopCenter).padding(top = 1.dp).tourTarget(targets, "add").size(58.dp)
                 .shadow(12.dp, RoundedCornerShape(21.dp), ambientColor = extra.accent, spotColor = extra.accent)
                 .background(extra.accent, RoundedCornerShape(21.dp)).pressScale(onAdd),
             contentAlignment = Alignment.Center,
@@ -171,11 +183,11 @@ private fun FloatingNav(tab: Tab, badge: Int, onTab: (Tab) -> Unit, onAdd: () ->
 }
 
 @Composable
-private fun RowScope.NavItem(t: Tab, selected: Boolean, badge: Int, onClick: () -> Unit) {
+private fun RowScope.NavItem(t: Tab, selected: Boolean, badge: Int, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val w by animateFloatAsState(if (selected) 2.1f else 1f, spring(0.8f, Spring.StiffnessMediumLow), label = "w")
     val bg by animateColorAsState(if (selected) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent, label = "bg")
     val fg by animateColorAsState(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, label = "fg")
-    Box(Modifier.weight(w).height(52.dp).clip(RoundedCornerShape(22.dp)).background(bg).pressScale(onClick), contentAlignment = Alignment.Center) {
+    Box(modifier.weight(w).height(52.dp).clip(RoundedCornerShape(22.dp)).background(bg).pressScale(onClick), contentAlignment = Alignment.Center) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             BadgedBox({ if (badge > 0) Badge { Text(fa(badge)) } }) { Icon(t.icon, t.label, tint = fg) }
             AnimatedVisibility(selected, enter = fadeIn() + expandHorizontally(), exit = fadeOut() + shrinkHorizontally()) {

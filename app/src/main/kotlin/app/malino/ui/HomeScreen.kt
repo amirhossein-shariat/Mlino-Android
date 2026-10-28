@@ -53,6 +53,7 @@ private fun todayText(): String {
 fun HomeScreen(
     s: UiState, hidden: Boolean, onToggleHide: () -> Unit, needsSetup: Boolean,
     goInbox: () -> Unit, goMore: () -> Unit, goTx: () -> Unit, goReports: () -> Unit, onAdd: (Int) -> Unit, onPage: (Page) -> Unit, onCard: (CardUi) -> Unit,
+    targets: MutableMap<String, androidx.compose.ui.layout.LayoutCoordinates> = mutableMapOf(),
     modifier: Modifier = Modifier,
 ) {
     val hour = remember { Jalali.fromMillis(System.currentTimeMillis()).h }
@@ -65,13 +66,13 @@ fun HomeScreen(
                     Text(greeting(hour), style = MaterialTheme.typography.titleLarge)
                 }
                 Box(
-                    Modifier.size(42.dp).clip(RoundedCornerShape(15.dp)).background(MaterialTheme.colorScheme.surface)
+                    Modifier.tourTarget(targets, "gear").size(42.dp).clip(RoundedCornerShape(15.dp)).background(MaterialTheme.colorScheme.surface)
                         .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(15.dp)).pressScale(goMore),
                     contentAlignment = Alignment.Center,
                 ) { Icon(Icons.Rounded.Settings, "تنظیمات", Modifier.size(21.dp)) }
             }
         }
-        item { Hero(s, hidden, onToggleHide, Modifier.enter(1)) }
+        item { Hero(s, hidden, onToggleHide, Modifier.enter(1).tourTarget(targets, "hero")) }
         if (needsSetup) item { AlertCard("برای ثبت خودکار تراکنش‌ها، دسترسی پیامک و اعلان را فعال کنید", "فعال‌سازی", goMore, Modifier.enter(2)) }
         if (pending > 0) item { PendingBanner(pending, goInbox, Modifier.enter(2)) }
         if (s.dueSoon.isNotEmpty()) item { AlertCard("${fa(s.dueSoon.size)} قسط یا پرداخت نزدیک یا عقب‌افتاده است", "مشاهده", { onPage(Page.Debts) }, Modifier.enter(2)) }
@@ -108,7 +109,7 @@ fun HomeScreen(
             if (s.cards.isEmpty()) Surface2(Modifier.enter(4)) { EmptyState("هنوز کارتی ندارید", "از «تنظیمات» اولین کارت را اضافه کنید.") }
             else {
                 val ls = rememberLazyListState()
-                LazyRow(Modifier.enter(4), state = ls, flingBehavior = rememberSnapFlingBehavior(ls), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                LazyRow(Modifier.enter(4).tourTarget(targets, "cards"), state = ls, flingBehavior = rememberSnapFlingBehavior(ls), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     items(s.cards, key = { it.card.id }) { c -> BankCard(c, hidden) { onCard(c) } }
                 }
             }
