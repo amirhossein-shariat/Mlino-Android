@@ -65,7 +65,7 @@ class Repo(ctx: Context) {
     }
 
     /** Full pipeline for one captured message. Returns the created tx id (or null). Personal messages never get here. */
-    suspend fun ingest(msg: RawMsg): String? = db.withTransaction {
+    suspend fun ingest(msg: RawMsg, history: Boolean = false): String? = db.withTransaction {
         val cards = db.cards().all().map { it.toCore() }
         val near = db.tx().between(msg.receivedMs - 2 * 86_400_000L, msg.receivedMs + 86_400_000L).map { it.toCore() }
         val res = Ingest.processWith(msg, cards, near, templates.value, ignoreWords, newId = ::newId)
@@ -78,7 +78,21 @@ class Repo(ctx: Context) {
             is IngestResult.Unmapped -> { if (db.raw().sameCount(msg.sender, msg.body) == 0) raw("unmapped"); null }
             IngestResult.Duplicate -> { raw("duplicate"); null }
             is IngestResult.Created -> {
-                val withRule = res.txs.map { t -> if (t.id == res.newTxId) suggest(t) else t }
+                var withRule = res.txs.map { t -> if (t.id == res.newTxId) suggest(t) else t }
+                if (history) {
+                    // history import: the bank's own balance is the truth. A message older than the card's start moves the start back,
+                    // with the opening balance derived from that message; later differences then show up as gaps for the user to decide.
+                    val main = withRule.firstOrNull { it.id == res.newTxId }
+                    val card = main?.let { m -> cards.firstOrNull { it.id == m.cardId } }
+                    val bal = main?.balanceAfter
+                    if (main != null && card != null && bal != null && main.at < card.openingAt) {
+                        val fresh = withRule.filter { it.cardId == card.id && it.id !in near.map { n -> n.id } }
+                        val newStart = fresh.minOf { it.at } - 1000
+                        db.cards().upsert(card.copy(openingAt = newStart, openingBalance = bal - fresh.sumOf { Ledger.effect(it) }).toE())
+                    }
+                    // old messages are bank facts, not guesses: no inbox step
+                    withRule = withRule.map { if (it.id == res.newTxId) it.copy(status = TxStatus.CONFIRMED) else it }
+                }
                 db.tx().upsert(withRule.map { it.toE() })
                 raw("done", res.newTxId)
                 res.newTxId

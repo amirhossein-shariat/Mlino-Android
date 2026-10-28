@@ -187,7 +187,7 @@ class MainVm(app: Application) : AndroidViewModel(app) {
                     var n = 0
                     while (c.moveToNext()) {
                         val addr = c.getString(0).orEmpty(); val body = c.getString(1).orEmpty(); val date = c.getLong(2)
-                        if (repo.looksLikeBank(addr, body) && repo.ingest(RawMsg("sms", addr, "", body, date)) != null) importedCount.value++
+                        if (repo.looksLikeBank(addr, body) && repo.ingest(RawMsg("sms", addr, "", body, date), history = true) != null) importedCount.value++
                         if (++n % 25 == 0) importing.value = n
                     }
                 }
