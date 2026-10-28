@@ -61,4 +61,14 @@ class ReportsTest {
     @Test fun noSavingsCard() {
         assertNull(Reports.build(1405, 7, cards.take(1), txs).savings)
     }
+
+    @Test fun roundUpCountsAsSavingsNotExpense() {
+        val txs2 = listOf(
+            Tx("o", "c1", Jalali.toMillis(1405, 7, 5, 10, 0), TxType.OUT, 1_650_000, createdAt = 1),
+            Tx("r", "c1", Jalali.toMillis(1405, 7, 5, 10, 0) - 1000, TxType.ADJUST, -350_000, categoryId = Ingest.ROUNDUP, createdAt = 0),
+        )
+        val r = Reports.build(1405, 7, cards.take(1), txs2)
+        assertEquals(1_650_000, r.expense, "round-up is not an expense")
+        assertEquals(350_000, r.savings, "but it counts as saved")
+    }
 }

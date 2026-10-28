@@ -14,6 +14,8 @@ class Repo(ctx: Context) {
     val goals = kotlinx.coroutines.flow.MutableStateFlow(plan.goals())
     val assets = kotlinx.coroutines.flow.MutableStateFlow(plan.assets())
     val prices = kotlinx.coroutines.flow.MutableStateFlow(plan.prices())
+    val templates = kotlinx.coroutines.flow.MutableStateFlow(plan.templates())
+    fun saveTemplates(l: List<app.malino.core.Template>) { plan.saveTemplates(l); templates.value = l }
 
     fun saveBudgets(l: List<app.malino.core.Budget>) { plan.saveBudgets(l); budgets.value = l }
     fun saveDebts(l: List<app.malino.core.Debt>) { plan.saveDebts(l); debts.value = l }
@@ -51,17 +53,17 @@ class Repo(ctx: Context) {
         set(v) { prefs.edit().putStringSet("bank_pkgs", v).apply() }
 
     fun looksLikeBank(sender: String, text: String): Boolean =
-        bankSenders.any { sender.contains(it, ignoreCase = true) } || Parsers.parse(text, System.currentTimeMillis()) != null
+        bankSenders.any { sender.contains(it, ignoreCase = true) } || Parsers.parse(text, System.currentTimeMillis(), templates.value, sender) != null
 
     suspend fun seedCategories() {
-        if (db.categories().count() == 0) db.categories().upsert(DEFAULT_CATEGORIES)
+        db.categories().insertMissing(DEFAULT_CATEGORIES)
     }
 
     /** Full pipeline for one captured message. Returns the created tx id (or null). Personal messages never get here. */
     suspend fun ingest(msg: RawMsg): String? = db.withTransaction {
         val cards = db.cards().all().map { it.toCore() }
         val near = db.tx().between(msg.receivedMs - 2 * 86_400_000L, msg.receivedMs + 86_400_000L).map { it.toCore() }
-        val res = Ingest.process(msg, cards, near, ::newId)
+        val res = Ingest.processWith(msg, cards, near, templates.value, ::newId)
         val rawId = newId()
         suspend fun raw(state: String, txId: String? = null) =
             db.raw().put(RawE(rawId, msg.kind, msg.sender, msg.title, msg.body, msg.receivedMs, state, txId))
@@ -152,6 +154,7 @@ class Repo(ctx: Context) {
             CategoryE("other_out", "سایر", "expense", false, 9),
             CategoryE("invoice", "درآمد فاکتور", "income", true, 10), CategoryE("salary", "حقوق و درآمد", "income", false, 11),
             CategoryE("other_in", "سایر", "income", false, 12),
+            CategoryE(Ingest.ROUNDUP, "پس‌انداز رُند", "expense", false, 13),
         )
     }
 }

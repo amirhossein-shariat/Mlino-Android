@@ -12,6 +12,7 @@ import app.malino.data.RawE
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.UUID
 
 data class CardUi(val card: Card, val balance: Long)
@@ -175,12 +176,12 @@ class MainVm(app: Application) : AndroidViewModel(app) {
     }
 
     /** Reads the SMS inbox once and ingests every message from a bank sender (oldest first so transfers pair up). */
-    fun importSms(ctx: Context) {
+    fun importSms(ctx: Context, fromMs: Long = 0L) {
         if (importing.value >= 0) return
         io {
             importing.value = 0; importedCount.value = 0
             try {
-                ctx.contentResolver.query(Telephony.Sms.Inbox.CONTENT_URI, arrayOf("address", "body", "date"), null, null, "date ASC")?.use { c ->
+                ctx.contentResolver.query(Telephony.Sms.Inbox.CONTENT_URI, arrayOf("address", "body", "date"), "date >= ?", arrayOf(fromMs.toString()), "date ASC")?.use { c ->
                     var n = 0
                     while (c.moveToNext()) {
                         val addr = c.getString(0).orEmpty(); val body = c.getString(1).orEmpty(); val date = c.getLong(2)
@@ -197,6 +198,52 @@ class MainVm(app: Application) : AndroidViewModel(app) {
     fun saveGoals(l: List<Goal>) = io { repo.saveGoals(l) }
     fun saveAssets(l: List<Asset>) = io { repo.saveAssets(l) }
     fun savePrices(p: Prices) = io { repo.savePrices(p) }
+
+    val templates = repo.templates
+    fun deleteTemplate(id: String) = io { repo.saveTemplates(repo.templates.value.filter { it.id != id }) }
+
+    /** Learns a template from a message the user marked, checks that it reads the same message back, saves it and re-runs unparsed messages. */
+    fun teach(raw: RawE, text: String, picks: Map<Role, Int>, out: Boolean, dirWord: String, cardId: String, done: (Boolean, String) -> Unit) {
+        viewModelScope.launch(Dispatchers.Default) {
+            val t = Templates.learn(newId(), raw.sender, cardId, out, dirWord, text, picks, System.currentTimeMillis())
+            val check = Templates.apply(t, text, raw.receivedAt)
+            if (check == null || check.amount <= 0) {
+                launch(Dispatchers.Main) { done(false, "الگو ساخته نشد؛ مبلغ و مانده را دوباره انتخاب کنید.") }
+                return@launch
+            }
+            repo.saveTemplates(repo.templates.value + t)
+            val n = repo.reprocess()
+            launch(Dispatchers.Main) { done(true, "یاد گرفتم. ${fa(n)} پیام ثبت شد.") }
+        }
+    }
+
+    fun saveCardAndReprocess(c: Card) = io { repo.saveCard(c); repo.reprocess() }
+
+    fun shareSample(ctx: Context, raw: RawE) {
+        val text = Masking.mask(if (raw.title.isBlank()) raw.body else raw.title + "\n" + raw.body)
+        shareText(ctx, "نمونه‌ی پیام بانک (فرستنده: ${raw.sender})\n\n$text", "ارسال نمونه")
+    }
+
+    fun shareBackup(ctx: Context) = io {
+        runCatching {
+            val d = Jalali.today()
+            val f = java.io.File(exportsDir(ctx), "malino-backup-%04d%02d%02d.zip".format(d.y, d.m, d.d))
+            f.outputStream().use { app.malino.data.Backup.write(ctx, repo, it) }
+            withContext(Dispatchers.Main) { shareFile(ctx, f, "application/zip", "ارسال پشتیبان") }
+        }.onFailure { dataMsg.value = "ساخت پشتیبان ناموفق بود." }
+    }
+
+    fun shareXlsx(ctx: Context, from: Long, to: Long) = io {
+        runCatching {
+            val st = state.value
+            val after = st.txs.mapNotNull { u -> u.after?.let { u.tx.id to it } }.toMap()
+            val bytes = Export.transactions(st.coreCards, st.coreTxs, after, st.categories.associate { it.id to it.name }, from, to)
+            val d = Jalali.today()
+            val f = java.io.File(exportsDir(ctx), "malino-transactions-%04d%02d%02d.xlsx".format(d.y, d.m, d.d))
+            f.writeBytes(bytes)
+            withContext(Dispatchers.Main) { shareFile(ctx, f, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "ارسال فایل اکسل") }
+        }.onFailure { dataMsg.value = "ساخت فایل اکسل ناموفق بود." }
+    }
 
     fun newId() = UUID.randomUUID().toString()
 }

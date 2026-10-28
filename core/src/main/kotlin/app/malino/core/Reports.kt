@@ -49,7 +49,10 @@ object Reports {
             key = Jalali.monthKey(y, m), y = y, m = m, txCount = inMonth.size,
             income = inc.values.sum(), expense = exp.values.sum(), incomeByCat = inc, expenseByCat = exp,
             personalIncome = pi, personalExpense = pe, businessIncome = bi, businessExpense = be,
-            savings = if (saving.isEmpty()) null else saving.sumOf { (after[it.id] ?: 0L) - (before[it.id] ?: 0L) },
+            savings = (if (saving.isEmpty()) null else saving.sumOf { (after[it.id] ?: 0L) - (before[it.id] ?: 0L) }).let { s ->
+                val round = inMonth.filter { it.type == TxType.ADJUST && it.categoryId == Ingest.ROUNDUP }.sumOf { -it.amount }
+                if (s == null && round == 0L) null else (s ?: 0L) + round
+            },
             cards = cards.map { c -> CardReport(c.id, c.name, before[c.id] ?: 0, after[c.id] ?: 0, perCard[c.id]!![0], perCard[c.id]!![1]) },
             wealth = wealth, wealthChange = prev?.let { wealth - it.wealth },
             top = inMonth.filter { it.type == TxType.OUT }.sortedByDescending { it.amount }.take(5),

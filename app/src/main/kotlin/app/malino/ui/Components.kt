@@ -16,6 +16,7 @@ import androidx.compose.material.icons.rounded.LocalHospital
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Payments
 import androidx.compose.material.icons.rounded.Receipt
+import androidx.compose.material.icons.rounded.Savings
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.ShoppingBag
 import androidx.compose.material.icons.rounded.ArrowUpward
@@ -47,6 +48,7 @@ fun catIcon(id: String?): ImageVector? = when (id) {
     "fee" -> Icons.Rounded.AccountBalance
     "invoice" -> Icons.Rounded.Description
     "salary" -> Icons.Rounded.Payments
+    "roundup" -> Icons.Rounded.Savings
     "other_out", "other_in" -> Icons.Rounded.MoreHoriz
     else -> null
 }
@@ -77,8 +79,9 @@ fun TxRow(u: TxUi, modifier: Modifier = Modifier) {
         TxType.IN -> Triple(catIcon(t.categoryId) ?: Icons.Rounded.ArrowDownward, ex.incomeBg, ex.income)
         TxType.OUT, TxType.FEE -> Triple(catIcon(t.categoryId) ?: Icons.Rounded.ArrowUpward, ex.expenseBg, ex.expense)
         TxType.TRANSFER -> Triple(Icons.Rounded.SwapHoriz, MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.secondary)
-        TxType.ADJUST -> Triple(if (t.amount >= 0) Icons.Rounded.ArrowDownward else Icons.Rounded.ArrowUpward,
-            MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
+        TxType.ADJUST -> Triple(catIcon(t.categoryId) ?: if (t.amount >= 0) Icons.Rounded.ArrowDownward else Icons.Rounded.ArrowUpward,
+            if (t.categoryId == "roundup") extra.incomeBg else MaterialTheme.colorScheme.surfaceVariant,
+            if (t.categoryId == "roundup") extra.income else MaterialTheme.colorScheme.onSurfaceVariant)
     }
     val plus = when (t.type) { TxType.IN -> true; TxType.TRANSFER -> t.dirIn; TxType.ADJUST -> t.amount >= 0; else -> false }
     val amountColor = when (t.type) {

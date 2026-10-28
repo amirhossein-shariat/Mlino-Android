@@ -52,7 +52,7 @@ private fun todayText(): String {
 @Composable
 fun HomeScreen(
     s: UiState, hidden: Boolean, onToggleHide: () -> Unit, needsSetup: Boolean,
-    goInbox: () -> Unit, goMore: () -> Unit, goTx: () -> Unit, goReports: () -> Unit, onAdd: (Int) -> Unit, onPage: (Page) -> Unit,
+    goInbox: () -> Unit, goMore: () -> Unit, goTx: () -> Unit, goReports: () -> Unit, onAdd: (Int) -> Unit, onPage: (Page) -> Unit, onCard: (CardUi) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val hour = remember { Jalali.fromMillis(System.currentTimeMillis()).h }
@@ -109,7 +109,7 @@ fun HomeScreen(
             else {
                 val ls = rememberLazyListState()
                 LazyRow(Modifier.enter(4), state = ls, flingBehavior = rememberSnapFlingBehavior(ls), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(s.cards, key = { it.card.id }) { c -> BankCard(c, hidden) }
+                    items(s.cards, key = { it.card.id }) { c -> BankCard(c, hidden) { onCard(c) } }
                 }
             }
         }
@@ -201,17 +201,21 @@ private fun Quick(label: String, icon: ImageVector, bg: Color, fg: Color, modifi
 
 /** A bank-card tile tinted with the card's own colour. */
 @Composable
-private fun BankCard(c: CardUi, hidden: Boolean) {
+private fun BankCard(c: CardUi, hidden: Boolean, onClick: () -> Unit) {
     val base = Color(c.card.color)
     val chip = Brush.linearGradient(listOf(Color(0xFFF6DD9A), Color(0xFFC9A24B)))
     Box(
-        Modifier.width(232.dp).height(140.dp).clip(RoundedCornerShape(24.dp))
+        Modifier.width(232.dp).height(140.dp).clip(RoundedCornerShape(24.dp)).pressScale(onClick)
             .background(Brush.linearGradient(listOf(lerp(base, Color.White, .12f), lerp(base, Color.Black, .42f)))),
     ) {
         Canvas(Modifier.matchParentSize()) { drawCircle(Color.White.copy(alpha = .10f), 75.dp.toPx(), Offset(20.dp.toPx(), size.height - 5.dp.toPx())) }
         Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.SpaceBetween) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(c.card.name, Modifier.weight(1f), color = Color.White, fontWeight = FontWeight.Medium, style = MaterialTheme.typography.bodyMedium)
+            Row(verticalAlignment = Alignment.Top) {
+                Column(Modifier.weight(1f)) {
+                    Text(c.card.bank.ifBlank { c.card.name }, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp, maxLines = 1)
+                    Text(listOf(c.card.name.takeIf { c.card.bank.isNotBlank() }, c.card.purpose.takeIf { it.isNotBlank() && it != c.card.name }).filterNotNull().joinToString(" · "),
+                        color = Color.White.copy(alpha = .88f), style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                }
                 Box(Modifier.size(30.dp, 22.dp).clip(RoundedCornerShape(6.dp)).background(chip))
             }
             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -220,7 +224,7 @@ private fun BankCard(c: CardUi, hidden: Boolean) {
                 Text("ریال", color = Color.White.copy(alpha = .8f), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(bottom = 4.dp))
             }
             Row {
-                Text(c.card.bank.ifBlank { c.card.purpose }, Modifier.weight(1f), color = Color.White.copy(alpha = .85f), style = MaterialTheme.typography.labelSmall)
+                Spacer(Modifier.weight(1f))
                 if (c.card.last4.isNotBlank()) Text("⁦•••• ${Jalali.toFa(c.card.last4)}⁩", color = Color.White.copy(alpha = .85f), style = MaterialTheme.typography.labelSmall)
             }
         }

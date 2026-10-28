@@ -1,0 +1,46 @@
+# Bank message samples. One block per sample: a header line "### name | key=value | ..." and then the message text up to the next "###".
+# Samples are anonymised (use Masking in the app before sharing). Expected keys: bank, key, out, amount, balance, extra (all optional except bank/out/amount/balance).
+### parsian-withdrawal | bank=parsian | key=12345678901234 | out=true | amount=500000 | balance=69521224
+12345678901234
+مبلغ:500,000-
+مانده:69,521,224
+08/04
+07:06
+### parsian-deposit | bank=parsian | key=12345678901234 | out=false | amount=1200000 | balance=70721224
+12345678901234
+مبلغ:1,200,000+
+مانده:70,721,224
+08/04
+07:09
+### tejarat-withdrawal | bank=tejarat | key=0123456789012 | out=true | amount=7436600 | balance=294363972
+*بانک تجارت*
+حساب: 0123456789012
+برداشت: 7,436,600 ریال
+از طريق: شتاب
+مانده: 294,363,972 ریال
+1405/07/30
+19:46
+### blu-roundup-no-date | bank=blu | key=blu | out=true | amount=1650000 | balance=5697039 | extra=350000
+بلو
+برداشت رُند
+کاربر عزیز، 1,650,000 ریال از حساب شما پرید.
+و 350,000 ریال هم رند شد.
+موجودی: 5,697,039 ریال
+### blu-plain-withdrawal | bank=blu | key=blu | out=true | amount=260000 | balance=537950039
+بلو
+برداشت پول
+کاربر عزیز، 260,000ریال از حساب شما پرید.
+موجودی: 537,950,039 ریال
+7:35
+۱۴۰۵.۰۸.۰۴
+### generic-deposit | bank=generic | key=1234567890 | out=false | amount=2500000 | balance=8000000
+بانک نمونه
+حساب 1234567890
+واریز 2,500,000 ریال
+مانده 8,000,000 ریال
+1405/08/05-14:22
+### generic-toman-card | bank=generic | key=4321 | out=true | amount=150000 | balance=3000000
+کارت **4321
+خرید 15,000 تومان
+مانده: 300,000 تومان
+08/05 10:11

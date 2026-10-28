@@ -35,7 +35,7 @@ class BankNotificationListener : NotificationListenerService() {
         val sub = e.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString().orEmpty()
         val body = listOf(main, lines, sub).filter { it.isNotBlank() }.distinct().joinToString("\n")
         if (body.isBlank()) return
-        val parsed = Parsers.parse("$title\n$body", sbn.postTime) != null
+        val parsed = Parsers.parse("$title\n$body", sbn.postTime, app.repo.templates.value, sbn.packageName) != null
         val chosen = sbn.packageName in app.repo.bankPackages
         // Unknown layouts are kept only for apps the user marked as bank apps, and only when they contain a number.
         if (!parsed && !(chosen && body.any { it.isDigit() })) return

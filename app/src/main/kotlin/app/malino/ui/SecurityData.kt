@@ -154,7 +154,6 @@ fun DataPage(s: UiState, vm: MainVm, onClose: () -> Unit, modifier: Modifier = M
 
     LazyColumn(modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 40.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { Row(verticalAlignment = Alignment.CenterVertically) { Text("پشتیبان و خروجی", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f)); TextButton(onClose) { Text("بستن") } } }
-        msg?.let { m -> item { Text(m, Modifier.fillMaxWidth().padding(14.dp), color = if (staged || m.contains("ذخیره شد")) extra.income else extra.warn, fontWeight = FontWeight.Medium) } }
 
         item { SectionTitle("پشتیبان‌گیری") }
         item {
@@ -162,7 +161,8 @@ fun DataPage(s: UiState, vm: MainVm, onClose: () -> Unit, modifier: Modifier = M
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("همه‌ی کارت‌ها، تراکنش‌ها، بودجه، اقساط و دارایی‌ها در یک فایل zip ذخیره می‌شود. آن را جایی امن (مثلاً فضای ابری یا کامپیوتر) نگه دارید؛ با پاک شدن برنامه، نسخه‌های داخل برنامه هم از بین می‌روند.",
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Button({ saveZip.launch("malino-backup-${d.y}${"%02d".format(d.m)}${"%02d".format(d.d)}.zip") }, colors = ButtonDefaults.buttonColors(containerColor = extra.accent, contentColor = extra.accentInk)) { Text("ذخیره‌ی پشتیبان", fontWeight = FontWeight.Bold) }
+                    Button({ saveZip.launch("malino-backup-${d.y}${"%02d".format(d.m)}${"%02d".format(d.d)}.zip") }, colors = ButtonDefaults.buttonColors(containerColor = extra.accent, contentColor = extra.accentInk)) { Text("ذخیره‌ی پشتیبان در فایل‌ها", fontWeight = FontWeight.Bold) }
+                    OutlinedButton({ vm.shareBackup(ctx) }) { Text("ارسال پشتیبان (تلگرام، ایمیل و …)") }
                     OutlinedButton({ openZip.launch(arrayOf("application/zip", "application/octet-stream", "*/*")) }) { Text("بازیابی از فایل پشتیبان") }
                 }
             }
@@ -194,7 +194,8 @@ fun DataPage(s: UiState, vm: MainVm, onClose: () -> Unit, modifier: Modifier = M
                             FilterChip(range == i, { range = i }, { Text(label) }, shape = RoundedCornerShape(99.dp))
                         }
                     }
-                    Button({ saveXlsx.launch("malino-transactions-${d.y}${"%02d".format(d.m)}${"%02d".format(d.d)}.xlsx") }) { Text("ساخت فایل اکسل") }
+                    Button({ saveXlsx.launch("malino-transactions-${d.y}${"%02d".format(d.m)}${"%02d".format(d.d)}.xlsx") }) { Text("ذخیره‌ی فایل اکسل در فایل‌ها") }
+                    OutlinedButton({ val (a, b) = rangeFor(range); vm.shareXlsx(ctx, a, b) }) { Text("ارسال فایل اکسل") }
                     Text("دو برگه: تراکنش‌ها (با تاریخ شمسی، کارت، دسته، مانده) و خلاصه‌ی دسته‌ها.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -208,6 +209,9 @@ fun DataPage(s: UiState, vm: MainVm, onClose: () -> Unit, modifier: Modifier = M
             confirmButton = { TextButton({ confirmRestore = null; go() }) { Text("بازیابی", fontWeight = FontWeight.Bold) } },
             dismissButton = { TextButton({ confirmRestore = null }) { Text("انصراف") } },
         )
+    }
+    if (!staged) msg?.let { m ->
+        AlertDialog(onDismissRequest = { vm.dataMsg.value = null }, text = { Text(m) }, confirmButton = { TextButton({ vm.dataMsg.value = null }) { Text("باشه", fontWeight = FontWeight.Bold) } })
     }
     if (staged) {
         AlertDialog(

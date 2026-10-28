@@ -54,6 +54,15 @@ class PlanStore(ctx: Context) {
         JSONObject().put("id", it.id).put("type", it.type.name).put("name", it.name).put("qty", it.qty).put("karat", it.karat).put("value", it.value)
     }).toString())
 
+    fun templates(): List<Template> = array("templates").mapObjects { o ->
+        Template(o.getString("id"), o.optString("sender"), o.getString("cardId"), o.getBoolean("out"), o.optString("dirWord"),
+            o.getJSONArray("fields").mapObjects { f -> Field(Role.valueOf(f.getString("role")), f.optString("prefix"), f.getInt("ordinal")) }, o.optLong("createdAt"))
+    }
+    fun saveTemplates(l: List<Template>) = write("templates", JSONArray(l.map { t ->
+        JSONObject().put("id", t.id).put("sender", t.sender).put("cardId", t.cardId).put("out", t.out).put("dirWord", t.dirWord).put("createdAt", t.createdAt)
+            .put("fields", JSONArray(t.fields.map { JSONObject().put("role", it.role.name).put("prefix", it.prefix).put("ordinal", it.ordinal) }))
+    }).toString())
+
     fun prices(): Prices = runCatching {
         JSONObject(read("prices") ?: "{}").let { Prices(it.optLong("gold18"), it.optLong("usd"), it.optLong("coin"), it.optLong("updatedAt")) }
     }.getOrDefault(Prices())

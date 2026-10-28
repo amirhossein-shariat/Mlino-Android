@@ -40,6 +40,7 @@ interface CategoryDao {
     @Query("SELECT * FROM categories ORDER BY sort") fun observe(): Flow<List<CategoryE>>
     @Query("SELECT COUNT(*) FROM categories") suspend fun count(): Int
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsert(list: List<CategoryE>)
+    @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insertMissing(list: List<CategoryE>)
 }
 
 @Dao

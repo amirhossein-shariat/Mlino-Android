@@ -58,9 +58,9 @@ private val DarkScheme = darkColorScheme(
     outline = Color(0xFF1C2B3A), outlineVariant = Color(0xFF1C2B3A),
     error = Color(0xFFFF8A85),
 )
-private val LightExtra = Extra(Color(0xFF12805C), Color(0xFFDDF3EA), Color(0xFFC23B3B), Color(0xFFFBE4E2), Color(0xFF9A5B08), Color(0xFFFCEFD6),
+private val LightExtra = Extra(Color(0xFF0A8F5B), Color(0xFFC4EBD8), Color(0xFFD32F2F), Color(0xFFF8CDC9), Color(0xFF9A5B08), Color(0xFFFCEFD6),
     Color(0xFF14304F), Color(0xFF17695F), Color.White, Color(0xFF1E9E67), Color.White)
-private val DarkExtra = Extra(Color(0xFF5FD3A2), Color(0xFF103426), Color(0xFFFF8A85), Color(0xFF3A1E1F), Color(0xFFF2B35E), Color(0xFF3A2D14),
+private val DarkExtra = Extra(Color(0xFF3DDC97), Color(0xFF0E4D34), Color(0xFFFF6B66), Color(0xFF5C2220), Color(0xFFF2B35E), Color(0xFF3A2D14),
     Color(0xFF173A5C), Color(0xFF14655D), Color.White, Color(0xFF5ED3A0), Color(0xFF06261A))
 
 private fun Typography.withFont(f: FontFamily) = copy(

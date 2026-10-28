@@ -14,12 +14,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.malino.core.Card
+import app.malino.core.Jalali
 
 @Composable
-fun MoreScreen(s: UiState, vm: MainVm, perms: Perms, onOpenCheck: () -> Unit, onPage: (Page) -> Unit, onEditCard: (Card?) -> Unit, modifier: Modifier = Modifier) {
+fun MoreScreen(s: UiState, vm: MainVm, perms: Perms, onOpenCheck: () -> Unit, onPage: (Page) -> Unit, onOpenCard: (Card) -> Unit, onEditCard: (Card?) -> Unit, modifier: Modifier = Modifier) {
     val ctx = LocalContext.current
     val importing by vm.importing.collectAsState()
     val imported by vm.importedCount.collectAsState()
+    var askRange by remember { mutableStateOf(false) }
 
     LazyColumn(modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 120.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item { Text("تنظیمات", style = MaterialTheme.typography.titleLarge, modifier = Modifier.enter(0)) }
@@ -57,11 +59,11 @@ fun MoreScreen(s: UiState, vm: MainVm, perms: Perms, onOpenCheck: () -> Unit, on
             Surface2(Modifier.enter(2)) {
                 if (s.cards.isEmpty()) EmptyState("کارتی اضافه نشده", "هر کارت یا حساب یک کاربرد دارد؛ مثلاً روزمره یا پس‌انداز.")
                 s.cards.forEach { c ->
-                    Row(Modifier.fillMaxWidth().clickable { onEditCard(c.card) }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.fillMaxWidth().clickable { onOpenCard(c.card) }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text(c.card.name, fontWeight = FontWeight.Medium)
-                            Text(listOf(c.card.bank, c.card.purpose).filter { it.isNotBlank() }.joinToString(" · "), style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(c.card.bank.ifBlank { c.card.name }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(listOf(c.card.name.takeIf { c.card.bank.isNotBlank() }, c.card.purpose.takeIf { it.isNotBlank() && it != c.card.name }).filterNotNull().joinToString(" · "),
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Icon(Icons.Rounded.ChevronLeft, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -75,11 +77,11 @@ fun MoreScreen(s: UiState, vm: MainVm, perms: Perms, onOpenCheck: () -> Unit, on
             Surface2(Modifier.enter(3)) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("وارد کردن پیامک‌های قبلی بانک", fontWeight = FontWeight.Medium)
-                    Text("همه‌ی پیامک‌های بانکی گوشی خوانده و به صندوق ورودی اضافه می‌شود. اول کارت‌ها را بسازید.",
+                    Text("پیامک‌های بانکی گوشی در بازه‌ای که انتخاب می‌کنید خوانده و به صندوق ورودی اضافه می‌شود. اول کارت‌ها را بسازید.",
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     AnimatedVisibility(importing >= 0) { LinearProgressIndicator(Modifier.fillMaxWidth()) }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        FilledTonalButton({ vm.importSms(ctx) }, enabled = perms.sms && importing < 0) {
+                        FilledTonalButton({ askRange = true }, enabled = perms.sms && importing < 0) {
                             Text(if (importing >= 0) "در حال خواندن… ${fa(importing)}" else "شروع")
                         }
                         if (importing < 0 && imported > 0) Text("${fa(imported)} تراکنش اضافه شد", style = MaterialTheme.typography.bodySmall)
@@ -89,4 +91,38 @@ fun MoreScreen(s: UiState, vm: MainVm, perms: Perms, onOpenCheck: () -> Unit, on
             }
         }
     }
+
+    if (askRange) ImportRangeDialog(onDismiss = { askRange = false }) { from -> askRange = false; vm.importSms(ctx, from) }
+}
+
+private val RANGES = listOf("۱ ماه اخیر" to 30, "۳ ماه اخیر" to 90, "۶ ماه اخیر" to 180, "۱ سال اخیر" to 365, "همه" to 0)
+
+/** Asks how far back to read bank SMS before the import starts. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ImportRangeDialog(onDismiss: () -> Unit, onStart: (Long) -> Unit) {
+    var sel by remember { mutableIntStateOf(1) }       // index in RANGES, or -1 = custom date
+    var custom by remember { mutableStateOf(Jalali.addDays(Jalali.today(), -30)) }
+    var pick by remember { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = onDismiss, title = { Text("پیامک‌ها از چه زمانی خوانده شود؟") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    RANGES.forEachIndexed { i, (label, _) -> FilterChip(sel == i, { sel = i }, { Text(label) }) }
+                    FilterChip(sel == -1, { sel = -1; pick = true }, { Text(if (sel == -1) "از " + Jalali.format(custom) else "تاریخ دلخواه") })
+                }
+                Text("پیامک‌های قبل از «تاریخ شروع» هر کارت در موجودی آن حساب نمی‌شوند. اگر موجودی اولیه را برای امروز گذاشته‌اید، بازه‌ی کوتاه کافی است.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        },
+        confirmButton = {
+            TextButton({
+                val days = if (sel >= 0) RANGES[sel].second else -1
+                onStart(when { sel == -1 -> Jalali.toMillis(custom.y, custom.m, custom.d); days == 0 -> 0L; else -> System.currentTimeMillis() - days * 86_400_000L })
+            }) { Text("شروع", fontWeight = FontWeight.Bold) }
+        },
+        dismissButton = { TextButton(onDismiss) { Text("انصراف") } },
+    )
+    if (pick) JalaliPickerDialog(custom, { pick = false }) { custom = it; pick = false }
 }

@@ -159,7 +159,7 @@ private val SWATCHES = listOf(0xFF14304F, 0xFF1F5C7A, 0xFF12805C, 0xFFC98B1E, 0x
 
 /** Add / edit a card. */
 @Composable
-fun CardDialog(card: Card?, newId: () -> String, onSave: (Card) -> Unit, onDelete: (() -> Unit)?, onDismiss: () -> Unit) {
+fun CardDialog(card: Card?, newId: () -> String, onSave: (Card) -> Unit, onDelete: (() -> Unit)?, onDismiss: () -> Unit, isNew: Boolean = card == null) {
     var name by remember { mutableStateOf(card?.name.orEmpty()) }
     var bank by remember { mutableStateOf(card?.bank.orEmpty()) }
     var last4 by remember { mutableStateOf(card?.last4.orEmpty()) }
@@ -169,9 +169,10 @@ fun CardDialog(card: Card?, newId: () -> String, onSave: (Card) -> Unit, onDelet
     var openingAt by remember { mutableLongStateOf(card?.openingAt ?: System.currentTimeMillis()) }
     var color by remember { mutableLongStateOf(card?.color ?: SWATCHES[0]) }
     var pick by remember { mutableStateOf(false) }
+    var dateChanged by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (card == null) "کارت جدید" else "ویرایش کارت") },
+        title = { Text(if (isNew) "کارت جدید" else "ویرایش کارت") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(name, { name = it }, label = { Text("نام (مثلاً روزمره)") }, singleLine = true)
@@ -198,7 +199,7 @@ fun CardDialog(card: Card?, newId: () -> String, onSave: (Card) -> Unit, onDelet
             TextButton(enabled = name.isNotBlank(), onClick = {
                 val d = Jalali.fromMillis(openingAt).date
                 onSave(Card(card?.id ?: newId(), name.trim(), bank.trim(), last4, key, purpose.trim(), color, opening.toLongOrNull() ?: 0,
-                    Jalali.toMillis(d.y, d.m, d.d)))
+                    if (dateChanged || (isNew && card == null)) Jalali.toMillis(d.y, d.m, d.d) else openingAt))
                 onDismiss()
             }) { Text("ذخیره", fontWeight = FontWeight.Bold) }
         },
@@ -207,6 +208,6 @@ fun CardDialog(card: Card?, newId: () -> String, onSave: (Card) -> Unit, onDelet
         },
     )
     if (pick) JalaliPickerDialog(Jalali.fromMillis(openingAt).date, { pick = false }) { d ->
-        openingAt = Jalali.toMillis(d.y, d.m, d.d); pick = false
+        openingAt = Jalali.toMillis(d.y, d.m, d.d); dateChanged = true; pick = false
     }
 }

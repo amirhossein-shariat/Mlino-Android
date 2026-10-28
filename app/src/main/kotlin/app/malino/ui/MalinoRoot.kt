@@ -66,6 +66,9 @@ fun MalinoRoot(vm: MainVm = viewModel()) {
         var showSheet by remember { mutableStateOf(false) }
         var editCard by remember { mutableStateOf<Card?>(null) }
         var showCard by remember { mutableStateOf(false) }
+        var cardIsNew by remember { mutableStateOf(true) }
+        var teachRaw by remember { mutableStateOf<app.malino.data.RawE?>(null) }
+        var cardSheetId by remember { mutableStateOf<String?>(null) }
         fun add(kind: Int) { sheetTx = null; sheetKind = kind; showSheet = true }
 
         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
@@ -79,11 +82,11 @@ fun MalinoRoot(vm: MainVm = viewModel()) {
             ) { t ->
                 when (t) {
                     Tab.Home -> HomeScreen(s, hidden, vm::toggleHide, !perms.ok, goInbox = { tab = Tab.Inbox }, goMore = { tab = Tab.More },
-                        goTx = { tab = Tab.Tx }, goReports = { tab = Tab.Reports }, onAdd = ::add, onPage = { page = it })
-                    Tab.Inbox -> InboxScreen(s, vm)
+                        goTx = { tab = Tab.Tx }, goReports = { tab = Tab.Reports }, onAdd = ::add, onPage = { page = it }, onCard = { cardSheetId = it.card.id })
+                    Tab.Inbox -> InboxScreen(s, vm, onTeach = { teachRaw = it }, onCardFrom = { r -> editCard = cardFromMessage(r); cardIsNew = true; showCard = true })
                     Tab.Tx -> TxScreen(s, onEdit = { sheetTx = it; showSheet = true })
                     Tab.Reports -> ReportsScreen(s, Modifier.statusBarsPadding())
-                    Tab.More -> MoreScreen(s, vm, perms, onOpenCheck = { showCheck = true }, onPage = { page = it }, onEditCard = { editCard = it; showCard = true }, modifier = Modifier.statusBarsPadding())
+                    Tab.More -> MoreScreen(s, vm, perms, onOpenCheck = { showCheck = true }, onPage = { page = it }, onOpenCard = { cardSheetId = it.id }, onEditCard = { editCard = it; cardIsNew = true; showCard = true }, modifier = Modifier.statusBarsPadding())
                 }
             }
             FloatingNav(tab, s.inbox.size + s.gaps.size, onTab = { tab = it }, onAdd = { add(0) }, modifier = Modifier.align(Alignment.BottomCenter))
@@ -100,6 +103,12 @@ fun MalinoRoot(vm: MainVm = viewModel()) {
                     Page.Data -> DataPage(s, vm, onClose = { page = null })
                     null -> {}
                 }
+            }
+        }
+        AnimatedVisibility(teachRaw != null, enter = slideInVertically(spring(0.9f, Spring.StiffnessMediumLow)) { it / 3 } + fadeIn(), exit = slideOutVertically { it / 3 } + fadeOut()) {
+            BackHandler { teachRaw = null }
+            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).systemBarsPadding()) {
+                teachRaw?.let { TeachPage(it, s, vm, onClose = { teachRaw = null }) }
             }
         }
         AnimatedVisibility(showCheck, enter = slideInVertically(spring(0.9f, Spring.StiffnessMediumLow)) { it / 3 } + fadeIn(), exit = slideOutVertically { it / 3 } + fadeOut()) {
@@ -120,8 +129,11 @@ fun MalinoRoot(vm: MainVm = viewModel()) {
         }
 
         if (showSheet) TxSheet(s, sheetTx, sheetKind, vm::newId, vm::saveTx, vm::deleteTx) { showSheet = false }
-        if (showCard) CardDialog(editCard, vm::newId, vm::saveCard,
-            onDelete = editCard?.let { c -> { vm.deleteCard(c) { }; showCard = false } }) { showCard = false }
+        s.cards.firstOrNull { it.card.id == cardSheetId }?.let { cu ->
+            CardSheet(cu, s, onEdit = { editCard = cu.card; cardIsNew = false; showCard = true; cardSheetId = null }, onDismiss = { cardSheetId = null })
+        }
+        if (showCard) CardDialog(editCard, vm::newId, vm::saveCardAndReprocess,
+            onDelete = if (cardIsNew) null else editCard?.let { c -> { vm.deleteCard(c) { }; showCard = false } }, onDismiss = { showCard = false }, isNew = cardIsNew)
     }
 }
 
@@ -162,4 +174,13 @@ private fun RowScope.NavItem(t: Tab, selected: Boolean, badge: Int, onClick: () 
             }
         }
     }
+}
+
+/** Pre-fills a new card from a message no card matched: its key, the bank, and the balance just before that message. */
+private fun cardFromMessage(r: app.malino.data.RawE): Card {
+    val p = app.malino.core.Parsers.parse(if (r.title.isBlank()) r.body else r.title + "\n" + r.body, r.receivedAt, emptyList(), r.sender)
+    val before = if (p == null) 0L else if (p.out) p.balance + p.amount + p.extraOut else p.balance - p.amount
+    val bank = when (p?.bank) { "blu" -> "blu"; "parsian" -> "پارسیان"; "tejarat" -> "تجارت"; else -> "" }
+    val key = if (p != null && p.key.isNotBlank() && p.key != "blu") p.key else if (p?.bank == "blu") "" else r.sender
+    return Card(java.util.UUID.randomUUID().toString(), name = "", bank = bank, smsKey = key, openingBalance = before, openingAt = (p?.at ?: r.receivedAt) - 1000)
 }

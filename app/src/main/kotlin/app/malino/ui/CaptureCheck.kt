@@ -207,6 +207,24 @@ fun CaptureCheckScreen(s: UiState, vm: MainVm, onClose: () -> Unit, modifier: Mo
             }
         }
 
+        val taught by vm.templates.collectAsState()
+        if (taught.isNotEmpty()) {
+            item { SectionTitle("قالب‌هایی که یاد داده‌اید") }
+            item {
+                Surface2 {
+                    taught.forEach { t ->
+                        Row(Modifier.fillMaxWidth().padding(14.dp, 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text((if (t.out) "برداشت" else "واریز") + " · " + t.sender.ifBlank { "هر فرستنده" }, fontWeight = FontWeight.Medium, maxLines = 1)
+                                Text(s.cards.firstOrNull { it.card.id == t.cardId }?.card?.name ?: "کارت حذف شده", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            TextButton({ vm.deleteTemplate(t.id) }) { Text("حذف") }
+                        }
+                    }
+                }
+            }
+        }
+
         item { SectionTitle("آخرین پیام‌های بانکی دریافت‌شده") }
         if (raw.isEmpty()) item { Surface2 { EmptyState("هنوز پیامی ثبت نشده", "بعد از اولین پیامک یا اعلان بانکی اینجا می‌آید.") } }
         items(raw, key = { it.id }) { r ->
@@ -218,7 +236,9 @@ fun CaptureCheckScreen(s: UiState, vm: MainVm, onClose: () -> Unit, modifier: Mo
                         Spacer(Modifier.weight(1f))
                         Text("${dayLabel(r.receivedAt)} ${clock(r.receivedAt)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
+                    Text("فرستنده: " + r.sender.ifBlank { "—" }, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(r.body, maxLines = 3, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    TextButton({ vm.shareSample(ctx, r) }, contentPadding = PaddingValues(0.dp)) { Text("ارسال به‌عنوان نمونه (بدون شماره)") }
                 }
             }
         }

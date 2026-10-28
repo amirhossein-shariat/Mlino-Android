@@ -46,8 +46,10 @@ private fun SwipeConfirm(onConfirm: () -> Unit, content: @Composable () -> Unit)
     )
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-fun InboxScreen(s: UiState, vm: MainVm, modifier: Modifier = Modifier) {
+fun InboxScreen(s: UiState, vm: MainVm, onTeach: (app.malino.data.RawE) -> Unit, onCardFrom: (app.malino.data.RawE) -> Unit, modifier: Modifier = Modifier) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     val picks = remember { mutableStateMapOf<String, String?>() }
     val empty = s.inbox.isEmpty() && s.gaps.isEmpty() && s.attention.isEmpty()
     LazyColumn(modifier.fillMaxSize().statusBarsPadding(), contentPadding = PaddingValues(16.dp, 12.dp, 16.dp, 130.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -76,8 +78,14 @@ fun InboxScreen(s: UiState, vm: MainVm, modifier: Modifier = Modifier) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(if (r.state == "unmapped") "کارتی برای این پیام پیدا نشد" else "قالب این پیام شناخته نشد", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
                     Text(r.body, maxLines = 4, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (r.state == "unmapped") FilledTonalButton({ vm.reprocess() }) { Text("پردازش دوباره") }
+                    androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (r.state == "unmapped") {
+                            Button({ onCardFrom(r) }, colors = ButtonDefaults.buttonColors(containerColor = extra.accent, contentColor = extra.accentInk)) { Text("ساخت کارت از این پیام") }
+                            FilledTonalButton({ vm.reprocess() }) { Text("پردازش دوباره") }
+                        } else {
+                            Button({ onTeach(r) }, colors = ButtonDefaults.buttonColors(containerColor = extra.accent, contentColor = extra.accentInk)) { Text("یاد بده") }
+                            OutlinedButton({ vm.shareSample(ctx, r) }) { Text("ارسال نمونه") }
+                        }
                         TextButton({ vm.dismissRaw(r.id) }) { Text("نادیده بگیر") }
                     }
                 }

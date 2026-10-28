@@ -5,7 +5,7 @@ package app.malino.core
  * [extraOut]: an extra amount the bank moved out in the same event (Blu's «رُند» round-up to savings): it also lowered the balance,
  * so it becomes its own non-expense entry and the bank balance still lines up.
  */
-data class Parsed(val bank: String, val key: String, val out: Boolean, val amount: Long, val balance: Long, val at: Long, val extraOut: Long = 0)
+data class Parsed(val bank: String, val key: String, val out: Boolean, val amount: Long, val balance: Long, val at: Long, val extraOut: Long = 0, val cardId: String? = null)
 
 interface BankParser {
     val bank: String
@@ -26,7 +26,7 @@ object Parsers {
     private val M = RegexOption.MULTILINE
 
     /** The SMS has day/month and time but no year: use the receive year, step back a year if that lands in the future. */
-    private fun resolveAt(jm: Int, jd: Int, h: Int, mi: Int, receivedMs: Long): Long? {
+    internal fun resolveAt(jm: Int, jd: Int, h: Int, mi: Int, receivedMs: Long): Long? {
         val y = Jalali.fromMillis(receivedMs).date.y
         for (jy in listOf(y, y - 1)) {
             if (!Jalali.isValid(jy, jm, jd)) continue
@@ -182,6 +182,9 @@ object Parsers {
 
     val all: List<BankParser> = listOf(parsian, tejarat, blu, generic)
 
+    /** Same normalisation the parsers use (Latin digits, no diacritics or bidi marks). Used by the teaching screen. */
+    fun normalize(text: String) = fixArabic(norm(text))
+
     /** Non-transaction messages. "otp" ones must never be stored; "promo" ones are ignored. */
     fun ignorable(text: String): String? {
         val t = norm(text)
@@ -190,12 +193,21 @@ object Parsers {
         return null
     }
 
-    /** First parser that understands the message wins; null = unknown format. */
-    fun parse(text: String, receivedMs: Long = System.currentTimeMillis()): Parsed? {
-        for (p in all) {
+    /**
+     * First understanding wins: dedicated bank parsers, then templates the user taught ([templates], only those for this [sender]),
+     * then the generic fallback. null = unknown format.
+     */
+    fun parse(text: String, receivedMs: Long = System.currentTimeMillis(), templates: List<Template> = emptyList(), sender: String = ""): Parsed? {
+        for (p in all.filter { it.bank != "generic" }) {
             val r = p.parse(text, receivedMs)
             if (r != null && r.amount > 0) return r
         }
-        return null
+        for (t in templates) {
+            if (t.sender.isNotBlank() && !t.sender.equals(sender.trim(), ignoreCase = true)) continue
+            val r = Templates.apply(t, text, receivedMs)
+            if (r != null && r.amount > 0) return r
+        }
+        val g = generic.parse(text, receivedMs)
+        return if (g != null && g.amount > 0) g else null
     }
 }
