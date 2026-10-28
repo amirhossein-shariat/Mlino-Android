@@ -7,6 +7,23 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountBalance
+import androidx.compose.material.icons.rounded.ShoppingCart
+import androidx.compose.material.icons.rounded.EventRepeat
+import androidx.compose.material.icons.rounded.VerifiedUser
+import androidx.compose.material.icons.rounded.CarRepair
+import androidx.compose.material.icons.rounded.Checkroom
+import androidx.compose.material.icons.rounded.Spa
+import androidx.compose.material.icons.rounded.Subscriptions
+import androidx.compose.material.icons.rounded.Flight
+import androidx.compose.material.icons.rounded.RequestQuote
+import androidx.compose.material.icons.rounded.Work
+import androidx.compose.material.icons.rounded.Storefront
+import androidx.compose.material.icons.rounded.HomeWork
+import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.ShowChart
+import androidx.compose.material.icons.rounded.Paid
+import androidx.compose.material.icons.rounded.VolunteerActivism
+import androidx.compose.material.icons.rounded.Sell
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.School
@@ -69,6 +86,25 @@ fun catIcon(id: String?): ImageVector? = when (id) {
     "invest" -> Icons.Rounded.TrendingUp
     "interest" -> Icons.Rounded.Percent
     "refund" -> Icons.Rounded.Replay
+    "grocery" -> Icons.Rounded.ShoppingCart
+    "installment" -> Icons.Rounded.EventRepeat
+    "insurance" -> Icons.Rounded.VerifiedUser
+    "car" -> Icons.Rounded.CarRepair
+    "clothes" -> Icons.Rounded.Checkroom
+    "beauty" -> Icons.Rounded.Spa
+    "subscription" -> Icons.Rounded.Subscriptions
+    "travel" -> Icons.Rounded.Flight
+    "tax" -> Icons.Rounded.RequestQuote
+    "loan_out" -> Icons.Rounded.Payments
+    "freelance" -> Icons.Rounded.Work
+    "sales" -> Icons.Rounded.Storefront
+    "rent_in" -> Icons.Rounded.HomeWork
+    "bonus" -> Icons.Rounded.EmojiEvents
+    "profit" -> Icons.Rounded.ShowChart
+    "loan_in", "debt_back" -> Icons.Rounded.Paid
+    "subsidy" -> Icons.Rounded.VolunteerActivism
+    "sell_asset" -> Icons.Rounded.Sell
+    "cashback" -> Icons.Rounded.Percent
     "other_out", "other_in" -> Icons.Rounded.MoreHoriz
     else -> null
 }
@@ -100,12 +136,12 @@ fun TxRow(u: TxUi, modifier: Modifier = Modifier) {
         TxType.OUT, TxType.FEE -> Triple(catIcon(t.categoryId) ?: Icons.Rounded.ArrowUpward, ex.expenseBg, ex.expense)
         TxType.TRANSFER -> Triple(Icons.Rounded.SwapHoriz, MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.secondary)
         TxType.ADJUST -> Triple(catIcon(t.categoryId) ?: if (t.amount >= 0) Icons.Rounded.ArrowDownward else Icons.Rounded.ArrowUpward,
-            if (t.categoryId == "roundup") extra.incomeBg else MaterialTheme.colorScheme.surfaceVariant,
-            if (t.categoryId == "roundup") extra.income else MaterialTheme.colorScheme.onSurfaceVariant)
+            if (t.categoryId == "roundup") extra.accent.copy(alpha = .20f) else MaterialTheme.colorScheme.surfaceVariant,
+            if (t.categoryId == "roundup") extra.accent else MaterialTheme.colorScheme.onSurfaceVariant)
     }
     val plus = when (t.type) { TxType.IN -> true; TxType.TRANSFER -> t.dirIn; TxType.ADJUST -> t.amount >= 0; else -> false }
     val amountColor = when (t.type) {
-        TxType.IN -> ex.income; TxType.OUT, TxType.FEE -> ex.expense; TxType.ADJUST -> if (plus) ex.income else ex.expense
+        TxType.IN -> ex.income; TxType.OUT, TxType.FEE -> ex.expense; TxType.ADJUST -> if (t.categoryId == "roundup") ex.accent else if (plus) ex.income else ex.expense
         TxType.TRANSFER -> MaterialTheme.colorScheme.onSurface
     }
     // faded = before the card start (not counted) or inside a period whose bank balance has not been settled yet
@@ -122,7 +158,7 @@ fun TxRow(u: TxUi, modifier: Modifier = Modifier) {
             if (u.dimmed) Text("قبل از تاریخ شروع کارت؛ در مانده و گزارش حساب نمی‌شود", style = MaterialTheme.typography.labelSmall,
                 color = extra.warn, maxLines = 2)
             // user note under the line when a category already took the title
-            if (u.categoryName != null && t.note.isNotBlank()) Text("📝 " + t.note, style = MaterialTheme.typography.bodySmall,
+            if (u.categoryName != null && t.type != TxType.ADJUST && t.categoryId != "roundup" && t.note.isNotBlank() && t.note !in AUTO_NOTES) Text("📝 " + t.note, style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = .75f), maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         Text(
@@ -158,3 +194,16 @@ fun cardInk(base: Color): Color = if (base.luminance() > .5f) Color(0xFF14202B) 
 fun cardBrush(base: Color): Brush =
     if (base.luminance() > .5f) Brush.linearGradient(listOf(Color.White, lerp(base, Color.Black, .14f)))
     else Brush.linearGradient(listOf(lerp(base, Color.White, .12f), lerp(base, Color.Black, .42f)))
+
+/** Card face title: «بانک X»; the card's own name goes in parentheses below it. */
+fun bankTitle(c: app.malino.core.Card): String =
+    if (c.bank.isBlank()) c.name else (if (c.bank.trim().startsWith("بانک")) c.bank.trim() else "بانک ${c.bank.trim()}")
+
+fun cardSub(c: app.malino.core.Card): String =
+    listOfNotNull(if (c.bank.isNotBlank()) "(${c.name})" else null, c.purpose.takeIf { it.isNotBlank() && it != c.name }).joinToString(" · ")
+
+/** Notes the app writes itself; they are not repeated under the row. */
+private val AUTO_NOTES = setOf("کارمزد", "کارمزد انتقال", "تعدیل مانده", "رُند (پس‌انداز)")
+
+@Composable
+fun TxDivider() = HorizontalDivider(Modifier.padding(horizontal = 14.dp), thickness = 1.dp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .16f))

@@ -54,8 +54,10 @@ fun TxScreen(s: UiState, onEdit: (Tx) -> Unit, modifier: Modifier = Modifier) {
                     Text(signedMoney(kotlin.math.abs(sum), sum >= 0), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            items(rows, key = { it.tx.id }) { u ->
-                Surface2(Modifier.animateItem().clickable { onEdit(u.tx) }) { TxRow(u) }
+            item(key = "d$day") {
+                Surface2(Modifier.animateItem()) {
+                    rows.forEachIndexed { i, u -> if (i > 0) TxDivider(); Box(Modifier.clickable { onEdit(u.tx) }) { TxRow(u) } }
+                }
             }
         }
     }

@@ -16,8 +16,9 @@ import androidx.compose.ui.unit.dp
 import app.malino.core.Card
 import app.malino.core.Jalali
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun MoreScreen(s: UiState, vm: MainVm, perms: Perms, onOpenCheck: () -> Unit, onPage: (Page) -> Unit, onOpenCard: (Card) -> Unit, onEditCard: (Card?) -> Unit, modifier: Modifier = Modifier) {
+fun MoreScreen(s: UiState, vm: MainVm, perms: Perms, onOpenCheck: () -> Unit, onPage: (Page) -> Unit, onOpenCard: (Card) -> Unit, onEditCard: (Card?) -> Unit, onTour: () -> Unit = {}, modifier: Modifier = Modifier) {
     val ctx = LocalContext.current
     val importing by vm.importing.collectAsState()
     val imported by vm.importedCount.collectAsState()
@@ -25,6 +26,22 @@ fun MoreScreen(s: UiState, vm: MainVm, perms: Perms, onOpenCheck: () -> Unit, on
 
     LazyColumn(modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 120.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item { Text("تنظیمات", style = MaterialTheme.typography.titleLarge, modifier = Modifier.enter(0)) }
+
+        item { SectionTitle("ظاهر برنامه", Modifier.enter(1)) }
+        item {
+            val mode by vm.themeMode.collectAsState()
+            Surface2(Modifier.enter(1)) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("حالت نمایش", fontWeight = FontWeight.Medium)
+                    androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf(0 to "هماهنگ با دستگاه", 1 to "روشن", 2 to "تیره").forEach { (m, label) ->
+                            FilterChip(mode == m, { vm.setTheme(m) }, { Text(label) }, shape = androidx.compose.foundation.shape.RoundedCornerShape(99.dp))
+                        }
+                    }
+                    TextButton({ onTour() }) { Text("نمایش دوباره‌ی آموزش برنامه") }
+                }
+            }
+        }
 
         item { SectionTitle("ثبت خودکار", Modifier.enter(1)) }
         item {
@@ -62,8 +79,8 @@ fun MoreScreen(s: UiState, vm: MainVm, perms: Perms, onOpenCheck: () -> Unit, on
                 s.cards.forEach { c ->
                     Row(Modifier.fillMaxWidth().clickable { onOpenCard(c.card) }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text(c.card.bank.ifBlank { c.card.name }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Text(listOf(c.card.name.takeIf { c.card.bank.isNotBlank() }, c.card.purpose.takeIf { it.isNotBlank() && it != c.card.name }).filterNotNull().joinToString(" · "),
+                            Text(bankTitle(c.card), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(cardSub(c.card),
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Icon(Icons.Rounded.ChevronLeft, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)

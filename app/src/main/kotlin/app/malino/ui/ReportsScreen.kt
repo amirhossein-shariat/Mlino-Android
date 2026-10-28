@@ -257,9 +257,9 @@ private fun CardMonthTile(r: CardReport, card: Card?, onClick: () -> Unit, modif
                 contentAlignment = Alignment.Center,
             ) { Icon(Icons.Rounded.CreditCard, null, tint = Color.White, modifier = Modifier.size(24.dp)) }
             Column(Modifier.weight(1f)) {
-                Text(card?.bank?.ifBlank { null } ?: r.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(card?.let { bankTitle(it) } ?: r.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1)
                 Text(
-                    listOf(r.name.takeIf { card?.bank?.isNotBlank() == true }, card?.purpose?.takeIf { it.isNotBlank() && it != r.name }).filterNotNull().joinToString(" · "),
+                    card?.let { cardSub(it) }.orEmpty(),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
                 )
             }

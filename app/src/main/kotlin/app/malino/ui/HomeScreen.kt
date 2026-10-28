@@ -120,7 +120,7 @@ fun HomeScreen(
             }
         }
         if (s.txs.isEmpty()) item { Surface2(Modifier.enter(5)) { EmptyState("تراکنشی ثبت نشده", "پیامک بانک که بیاید خودکار اینجا می‌نشیند.") } }
-        else item { Surface2(Modifier.enter(5)) { s.txs.take(6).forEach { TxRow(it) } } }
+        else item { Surface2(Modifier.enter(5)) { s.txs.take(6).forEachIndexed { i, u -> if (i > 0) TxDivider(); TxRow(u) } } }
     }
 }
 
@@ -213,8 +213,8 @@ private fun BankCard(c: CardUi, hidden: Boolean, onClick: () -> Unit) {
         Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.SpaceBetween) {
             Row(verticalAlignment = Alignment.Top) {
                 Column(Modifier.weight(1f)) {
-                    Text(c.card.bank.ifBlank { c.card.name }, color = ink, fontWeight = FontWeight.Bold, fontSize = 20.sp, maxLines = 1)
-                    Text(listOf(c.card.name.takeIf { c.card.bank.isNotBlank() }, c.card.purpose.takeIf { it.isNotBlank() && it != c.card.name }).filterNotNull().joinToString(" · "),
+                    Text(bankTitle(c.card), color = ink, fontWeight = FontWeight.Bold, fontSize = 20.sp, maxLines = 1)
+                    Text(cardSub(c.card),
                         color = ink.copy(alpha = .88f), style = MaterialTheme.typography.bodySmall, maxLines = 1)
                 }
                 Box(Modifier.size(30.dp, 22.dp).clip(RoundedCornerShape(6.dp)).background(chip))

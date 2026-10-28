@@ -109,6 +109,11 @@ class MainVm(app: Application) : AndroidViewModel(app) {
     val stats get() = repo.stats
     val security get() = repo.security
     fun bankApps(): Set<String> = repo.bankPackages
+    val themeMode get() = repo.themeMode
+    fun setTheme(m: Int) = repo.setThemeMode(m)
+    var tourDone: Boolean
+        get() = repo.tourDone
+        set(v) { repo.tourDone = v }
     fun ignoreWords(): Set<String> = repo.ignoreWords
     fun setIgnoreWord(w: String, on: Boolean) { val t = w.trim(); if (t.isNotEmpty()) repo.ignoreWords = if (on) repo.ignoreWords + t else repo.ignoreWords - t }
     fun setBankApp(pkg: String, on: Boolean) { repo.bankPackages = if (on) repo.bankPackages + pkg else repo.bankPackages - pkg }

@@ -58,8 +58,8 @@ fun CardSheet(cu: CardUi, s: UiState, onEdit: () -> Unit, onDismiss: () -> Unit)
             ) {
                 Row(verticalAlignment = Alignment.Top) {
                     Column(Modifier.weight(1f)) {
-                        Text(c.bank.ifBlank { c.name }, color = ink, fontWeight = FontWeight.Bold, fontSize = 22.sp)
-                        Text(listOf(c.name.takeIf { c.bank.isNotBlank() }, c.purpose.takeIf { it.isNotBlank() && it != c.name }).filterNotNull().joinToString(" · "),
+                        Text(bankTitle(c), color = ink, fontWeight = FontWeight.Bold, fontSize = 22.sp)
+                        Text(cardSub(c),
                             color = ink.copy(alpha = .88f), style = MaterialTheme.typography.bodyMedium)
                     }
                     if (c.last4.isNotBlank()) Text("⁦•••• ${Jalali.toFa(c.last4)}⁩", color = ink.copy(alpha = .85f), style = MaterialTheme.typography.labelMedium)
@@ -81,7 +81,7 @@ fun CardSheet(cu: CardUi, s: UiState, onEdit: () -> Unit, onDismiss: () -> Unit)
             }
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             if (shown.isEmpty()) Surface2 { EmptyState("چیزی نیست", "برای این بخش تراکنشی ثبت نشده.") }
-            else Surface2 { shown.take(60).forEach { TxRow(it) } }
+            else Surface2 { shown.take(60).forEachIndexed { i, u -> if (i > 0) TxDivider(); TxRow(u) } }
             if (shown.size > 60) Text("۶۰ مورد آخر نمایش داده شد؛ بقیه در «تراکنش‌ها».", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             OutlinedButton(onEdit, Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) { Text("ویرایش کارت") }
             }

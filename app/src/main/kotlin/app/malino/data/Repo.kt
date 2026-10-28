@@ -52,6 +52,15 @@ class Repo(ctx: Context) {
         get() = prefs.getStringSet("bank_pkgs", emptySet()) ?: emptySet()
         set(v) { prefs.edit().putStringSet("bank_pkgs", v).apply() }
 
+    /** 0 = follow the device, 1 = light, 2 = dark. */
+    val themeMode = kotlinx.coroutines.flow.MutableStateFlow(prefs.getInt("theme", 0))
+    fun setThemeMode(m: Int) { themeMode.value = m; prefs.edit().putInt("theme", m).apply() }
+
+    /** The 5-step intro tour on the main screens; shown once after onboarding. */
+    var tourDone: Boolean
+        get() = prefs.getBoolean("tour_done", false)
+        set(v) { prefs.edit().putBoolean("tour_done", v).apply() }
+
     /** Messages containing any of these words are skipped and never stored (default: «رمز»). */
     var ignoreWords: Set<String>
         get() = prefs.getStringSet("ignore_words", Parsers.DEFAULT_IGNORE_WORDS.toSet()) ?: emptySet()
@@ -249,6 +258,16 @@ class Repo(ctx: Context) {
             CategoryE("gift", "هدیه و کمک", "expense", false, 18), CategoryE("invest", "سرمایه‌گذاری", "expense", false, 19),
             CategoryE("interest", "سود سپرده", "income", false, 20), CategoryE("refund", "بازگشت وجه", "income", false, 21),
             CategoryE("gift_in", "هدیه", "income", false, 22),
+            CategoryE("grocery", "سوپرمارکت و خواروبار", "expense", false, 23), CategoryE("installment", "قسط و بازپرداخت وام", "expense", false, 24),
+            CategoryE("insurance", "بیمه", "expense", false, 25), CategoryE("car", "خودرو و تعمیرات", "expense", false, 26),
+            CategoryE("clothes", "پوشاک", "expense", false, 27), CategoryE("beauty", "آرایش و زیبایی", "expense", false, 28),
+            CategoryE("subscription", "اشتراک‌ها و اپ‌ها", "expense", false, 29), CategoryE("travel", "سفر", "expense", false, 30),
+            CategoryE("tax", "مالیات و عوارض", "expense", false, 31), CategoryE("loan_out", "قرض دادن", "expense", false, 32),
+            CategoryE("freelance", "پروژه و فریلنس", "income", false, 33), CategoryE("sales", "فروش کالا و خدمات", "income", true, 34),
+            CategoryE("rent_in", "اجاره‌ی دریافتی", "income", false, 35), CategoryE("bonus", "پاداش و عیدی", "income", false, 36),
+            CategoryE("profit", "سود سرمایه‌گذاری", "income", false, 37), CategoryE("loan_in", "وام و قرض دریافتی", "income", false, 38),
+            CategoryE("subsidy", "یارانه و کمک‌هزینه", "income", false, 39), CategoryE("sell_asset", "فروش دارایی", "income", false, 40),
+            CategoryE("cashback", "کش‌بک و تخفیف", "income", false, 41), CategoryE("debt_back", "بازگشت قرض", "income", false, 42),
         )
     }
 }

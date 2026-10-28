@@ -43,10 +43,14 @@ val LocalExtra = staticCompositionLocalOf {
 private val LightScheme = lightColorScheme(
     primary = Color(0xFF14304F), onPrimary = Color.White,
     secondary = Color(0xFF1F5C7A), onSecondary = Color.White,
-    background = Color(0xFFF2F5F8), onBackground = Color(0xFF0D1B2A),
-    surface = Color.White, onSurface = Color(0xFF0D1B2A),
-    surfaceVariant = Color(0xFFEBF0F5), onSurfaceVariant = Color(0xFF65788B),
-    outline = Color(0xFFE2E8EE), outlineVariant = Color(0xFFE2E8EE),
+    background = Color(0xFFEBEFF4), onBackground = Color(0xFF0B1722),
+    surface = Color.White, onSurface = Color(0xFF0B1722),
+    surfaceVariant = Color(0xFFE1E8F0), onSurfaceVariant = Color(0xFF475A6D),
+    outline = Color(0xFFC3CEDA), outlineVariant = Color(0xFFD3DCE6),
+    primaryContainer = Color(0xFFD5E3F2), onPrimaryContainer = Color(0xFF0B1722),
+    secondaryContainer = Color(0xFFD3E6F0), onSecondaryContainer = Color(0xFF0B1722),
+    surfaceContainerLowest = Color.White, surfaceContainerLow = Color(0xFFF7F9FB), surfaceContainer = Color(0xFFF1F4F8),
+    surfaceContainerHigh = Color.White, surfaceContainerHighest = Color(0xFFE6ECF2),
     error = Color(0xFFC23B3B),
 )
 private val DarkScheme = darkColorScheme(
@@ -54,11 +58,15 @@ private val DarkScheme = darkColorScheme(
     secondary = Color(0xFF6FB6D6), onSecondary = Color(0xFF07131C),
     background = Color(0xFF060B12), onBackground = Color(0xFFE8EEF4),
     surface = Color(0xFF0F1823), onSurface = Color(0xFFE8EEF4),
-    surfaceVariant = Color(0xFF17232F), onSurfaceVariant = Color(0xFF8FA1B3),
-    outline = Color(0xFF1C2B3A), outlineVariant = Color(0xFF1C2B3A),
+    surfaceVariant = Color(0xFF17232F), onSurfaceVariant = Color(0xFF9DAFC1),
+    outline = Color(0xFF243647), outlineVariant = Color(0xFF1C2B3A),
+    primaryContainer = Color(0xFF1B3A52), onPrimaryContainer = Color(0xFFE8EEF4),
+    secondaryContainer = Color(0xFF1F3446), onSecondaryContainer = Color(0xFFE8EEF4),
+    surfaceContainerLowest = Color(0xFF060B12), surfaceContainerLow = Color(0xFF0B131C), surfaceContainer = Color(0xFF0F1823),
+    surfaceContainerHigh = Color(0xFF142130), surfaceContainerHighest = Color(0xFF192A3B),
     error = Color(0xFFFF8A85),
 )
-private val LightExtra = Extra(Color(0xFF0A8F5B), Color(0xFFC4EBD8), Color(0xFFD32F2F), Color(0xFFF8CDC9), Color(0xFF9A5B08), Color(0xFFFCEFD6),
+private val LightExtra = Extra(Color(0xFF07784A), Color(0xFFC4EBD8), Color(0xFFC62828), Color(0xFFF8CDC9), Color(0xFF8A4F05), Color(0xFFFCEFD6),
     Color(0xFF14304F), Color(0xFF17695F), Color.White, Color(0xFF1E9E67), Color.White)
 private val DarkExtra = Extra(Color(0xFF3DDC97), Color(0xFF0E4D34), Color(0xFFFF6B66), Color(0xFF5C2220), Color(0xFFF2B35E), Color(0xFF3A2D14),
     Color(0xFF173A5C), Color(0xFF14655D), Color.White, Color(0xFF5ED3A0), Color(0xFF06261A))

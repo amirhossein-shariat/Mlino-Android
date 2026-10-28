@@ -38,7 +38,15 @@ private enum class Tab(val label: String, val icon: ImageVector) {
 
 @Composable
 fun MalinoRoot(vm: MainVm = viewModel()) {
-    MalinoTheme {
+    val themeMode by vm.themeMode.collectAsStateWithLifecycle()
+    val dark = when (themeMode) { 1 -> false; 2 -> true; else -> androidx.compose.foundation.isSystemInDarkTheme() }
+    MalinoTheme(dark) {
+        val view = androidx.compose.ui.platform.LocalView.current
+        SideEffect {
+            view.context.findActivity()?.window?.let { w ->
+                androidx.core.view.WindowCompat.getInsetsController(w, view).apply { isAppearanceLightStatusBars = !dark; isAppearanceLightNavigationBars = !dark }
+            }
+        }
         val ctx = LocalContext.current
         val s by vm.state.collectAsStateWithLifecycle()
         val hidden by vm.hideBalance.collectAsStateWithLifecycle()
