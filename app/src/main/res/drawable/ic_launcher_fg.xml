@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <!-- three rising bars + a coin dot: money going up -->
+    <path android:fillColor="#4CB582" android:pathData="M30,66h10v12h-10z" />
+    <path android:fillColor="#4CB582" android:pathData="M49,54h10v24h-10z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M68,40h10v38h-10z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M31,38m-5,0a5,5 0,1 1,10 0a5,5 0,1 1,-10 0" />
+</vector>
