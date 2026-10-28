@@ -185,9 +185,13 @@ object Parsers {
     /** Same normalisation the parsers use (Latin digits, no diacritics or bidi marks). Used by the teaching screen. */
     fun normalize(text: String) = fixArabic(norm(text))
 
+    val DEFAULT_IGNORE_WORDS = listOf("رمز")
+
     /** Non-transaction messages. "otp" ones must never be stored; "promo" ones are ignored. */
-    fun ignorable(text: String): String? {
+    fun ignorable(text: String, ignoreWords: Collection<String> = DEFAULT_IGNORE_WORDS): String? {
         val t = norm(text)
+        // words the user chose to skip entirely (default «رمز»: transfer-password messages); treated like OTP, never stored
+        if (ignoreWords.any { w -> w.isNotBlank() && t.contains(norm(w).trim(), ignoreCase = true) }) return "otp"
         if (Regex("""رمز\s*(یکبار|یک\s*بار|پویا|دوم)|کد\s*(تایید|تأیید|فعال|ورود)|\bOTP\b|\bcvv2\b""", RegexOption.IGNORE_CASE).containsMatchIn(t)) return "otp"
         if (Regex("""بسته\s*پیامکی|تمدید\s*شد""").containsMatchIn(t)) return "promo"
         return null

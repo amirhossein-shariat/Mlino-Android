@@ -107,6 +107,8 @@ class MainVm(app: Application) : AndroidViewModel(app) {
     val stats get() = repo.stats
     val security get() = repo.security
     fun bankApps(): Set<String> = repo.bankPackages
+    fun ignoreWords(): Set<String> = repo.ignoreWords
+    fun setIgnoreWord(w: String, on: Boolean) { val t = w.trim(); if (t.isNotEmpty()) repo.ignoreWords = if (on) repo.ignoreWords + t else repo.ignoreWords - t }
     fun setBankApp(pkg: String, on: Boolean) { repo.bankPackages = if (on) repo.bankPackages + pkg else repo.bankPackages - pkg }
     val lockEnabled = MutableStateFlow(repo.security.enabled)
     fun refreshLock() { lockEnabled.value = repo.security.enabled }
@@ -149,7 +151,7 @@ class MainVm(app: Application) : AndroidViewModel(app) {
     data class ParseCheck(val ignored: String?, val parsed: Parsed?, val cardName: String?)
 
     fun checkText(text: String): ParseCheck {
-        val ignored = Parsers.ignorable(text)
+        val ignored = Parsers.ignorable(text, repo.ignoreWords)
         val parsed = if (ignored == null) Parsers.parse(text, System.currentTimeMillis()) else null
         val card = parsed?.let { p -> state.value.coreCards.firstOrNull { it.smsKey.isNotBlank() && it.smsKey.trim().equals(p.key, true) } }
         return ParseCheck(ignored, parsed, card?.name)

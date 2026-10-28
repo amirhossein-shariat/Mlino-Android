@@ -57,7 +57,7 @@ fun TxSheet(s: UiState, tx: Tx?, kind0: Int, newId: () -> String, onSave: (Tx) -
             if (readOnly) {
                 Text(if (tx!!.type == TxType.TRANSFER) "انتقال بین کارت‌ها" else "تعدیل مانده", style = MaterialTheme.typography.titleLarge)
                 Text(
-                    if (tx.type == TxType.TRANSFER) "این تراکنش بخشی از یک انتقال است و از صندوق ورودی قابل جدا شدن است." else "این تعدیل برای هماهنگی مانده با بانک ثبت شده است.",
+                    if (tx.type == TxType.TRANSFER) "پول از یک کارت شما به کارت دیگرتان رفته است. این مورد جزو هزینه یا درآمد حساب نمی‌شود و فقط مانده‌ی دو کارت را جابه‌جا می‌کند. اگر انتقال نبوده، حذفش کنید." else "برنامه این تعدیل را خودش ساخته تا مانده با مانده‌ی بانک یکی شود. جزو هزینه یا درآمد نیست.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 OutlinedButton({ onDelete(tx.id); onDismiss() }) { Text("حذف") }

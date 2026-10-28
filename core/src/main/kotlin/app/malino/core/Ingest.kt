@@ -51,11 +51,11 @@ object Ingest {
      * Pipeline after the raw message has been stored: ignore OTP/promo -> parse -> match card by smsKey -> dedupe -> transfer matching.
      * [near] must hold every tx within +-10 minutes of the message time (any card) — enough for dedupe and transfer matching.
      */
-    fun process(msg: RawMsg, cards: List<Card>, near: List<Tx>, newId: () -> String): IngestResult = processWith(msg, cards, near, emptyList(), newId)
+    fun process(msg: RawMsg, cards: List<Card>, near: List<Tx>, newId: () -> String): IngestResult = processWith(msg, cards, near, emptyList(), newId = newId)
 
     /** Same, with the templates the user taught. */
-    fun processWith(msg: RawMsg, cards: List<Card>, near: List<Tx>, templates: List<Template>, newId: () -> String): IngestResult {
-        Parsers.ignorable(msg.text)?.let { return IngestResult.Ignored(it) }
+    fun processWith(msg: RawMsg, cards: List<Card>, near: List<Tx>, templates: List<Template>, ignoreWords: Collection<String> = Parsers.DEFAULT_IGNORE_WORDS, newId: () -> String): IngestResult {
+        Parsers.ignorable(msg.text, ignoreWords)?.let { return IngestResult.Ignored(it) }
         val p = Parsers.parse(msg.text, msg.receivedMs, templates, msg.sender) ?: return IngestResult.Unparsed
         val card = matchCard(cards, p, msg.sender) ?: return IngestResult.Unmapped(p)
         val dedupe = dedupeKey(card.id, p.out, p.amount, p.balance, p.at)

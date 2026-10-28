@@ -101,8 +101,10 @@ fun TxRow(u: TxUi, modifier: Modifier = Modifier) {
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = .75f), maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         Text(
-            if (u.dimmed) "—" else if (t.type == TxType.TRANSFER && !t.dirIn) "−" + money(t.amount) else signedMoney(kotlin.math.abs(t.amount), plus),
-            style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = amountColor,
+            if (t.type == TxType.TRANSFER && !t.dirIn) "−" + money(kotlin.math.abs(t.amount)) else signedMoney(kotlin.math.abs(t.amount), plus),
+            style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold,
+            // before the card's start date: still shown, but faded (not counted in the balance)
+            color = if (u.dimmed) amountColor.copy(alpha = .4f) else amountColor,
         )
     }
 }

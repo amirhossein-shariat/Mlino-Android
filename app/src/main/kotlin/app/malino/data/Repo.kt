@@ -52,6 +52,11 @@ class Repo(ctx: Context) {
         get() = prefs.getStringSet("bank_pkgs", emptySet()) ?: emptySet()
         set(v) { prefs.edit().putStringSet("bank_pkgs", v).apply() }
 
+    /** Messages containing any of these words are skipped and never stored (default: «رمز»). */
+    var ignoreWords: Set<String>
+        get() = prefs.getStringSet("ignore_words", Parsers.DEFAULT_IGNORE_WORDS.toSet()) ?: emptySet()
+        set(v) { prefs.edit().putStringSet("ignore_words", v).apply() }
+
     fun looksLikeBank(sender: String, text: String): Boolean =
         bankSenders.any { sender.contains(it, ignoreCase = true) } || Parsers.parse(text, System.currentTimeMillis(), templates.value, sender) != null
 
@@ -63,7 +68,7 @@ class Repo(ctx: Context) {
     suspend fun ingest(msg: RawMsg): String? = db.withTransaction {
         val cards = db.cards().all().map { it.toCore() }
         val near = db.tx().between(msg.receivedMs - 2 * 86_400_000L, msg.receivedMs + 86_400_000L).map { it.toCore() }
-        val res = Ingest.processWith(msg, cards, near, templates.value, ::newId)
+        val res = Ingest.processWith(msg, cards, near, templates.value, ignoreWords, newId = ::newId)
         val rawId = newId()
         suspend fun raw(state: String, txId: String? = null) =
             db.raw().put(RawE(rawId, msg.kind, msg.sender, msg.title, msg.body, msg.receivedMs, state, txId))

@@ -105,6 +105,24 @@ fun TeachPage(raw: RawE, s: UiState, vm: MainVm, onClose: () -> Unit, modifier: 
                 s.cards.forEach { c -> FilterChip(cardId == c.card.id, { cardId = c.card.id }, { Text(c.card.name) }, shape = RoundedCornerShape(99.dp)) }
             }
         }
+        item {
+            var words by remember { mutableStateOf(vm.ignoreWords()) }
+            var draft by remember { mutableStateOf("") }
+            Surface2 {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("پیام‌های نادیده‌گرفته‌شده", fontWeight = FontWeight.Medium)
+                    Text("پیامی که یکی از این کلمه‌ها را داشته باشد کلاً نادیده گرفته می‌شود و ذخیره نمی‌شود (مثلاً «رمز» برای رمز انتقال).",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        words.sorted().forEach { w -> FilterChip(true, { vm.setIgnoreWord(w, false); words = vm.ignoreWords() }, { Text("$w  ✕") }, shape = RoundedCornerShape(99.dp)) }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(draft, { draft = it }, Modifier.weight(1f), singleLine = true, placeholder = { Text("کلمه‌ی جدید") }, shape = RoundedCornerShape(14.dp))
+                        FilledTonalButton({ vm.setIgnoreWord(draft, true); words = vm.ignoreWords(); draft = "" }, enabled = draft.isNotBlank()) { Text("افزودن") }
+                    }
+                }
+            }
+        }
         msg?.let { m -> item { Text(m, color = if (m.startsWith("یاد گرفتم")) extra.income else extra.warn, fontWeight = FontWeight.Medium) } }
         item {
             Button(

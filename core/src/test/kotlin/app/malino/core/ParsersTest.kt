@@ -40,6 +40,8 @@ class ParsersTest {
         assertEquals("otp", Parsers.ignorable("رمز یکبار مصرف شما 123456 است"))
         assertEquals("otp", Parsers.ignorable("کد تایید: 4821"))
         assertEquals("promo", Parsers.ignorable("بسته پیامکی شما تمدید شد"))
+        assertEquals("otp", Parsers.ignorable("برداشت 500,000 ریال بابت رمز انتقال"))
+        assertNull(Parsers.ignorable("برداشت 500,000 ریال بابت رمز انتقال", emptyList()))
         assertNull(Parsers.ignorable("12345678901234\nمبلغ:500,000-\nمانده:1\n08/04\n07:06"))
     }
 }
