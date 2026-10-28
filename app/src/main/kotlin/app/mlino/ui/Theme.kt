@@ -21,10 +21,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.mlino.R
 
-val Vazir = FontFamily(
-    Font(R.font.vazirmatn_regular, FontWeight.Normal),
-    Font(R.font.vazirmatn_medium, FontWeight.Medium),
-    Font(R.font.vazirmatn_bold, FontWeight.Bold),
+val IranSans = FontFamily(
+    Font(R.font.iransans_light, FontWeight.Light),
+    Font(R.font.iransans_regular, FontWeight.Normal),
+    Font(R.font.iransans_medium, FontWeight.Medium),
+    Font(R.font.iransans_bold, FontWeight.Bold),
 )
 
 /** Semantic colours that Material's scheme has no slot for. */
@@ -78,7 +79,7 @@ fun MlinoTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () ->
     ) {
         MaterialTheme(
             colorScheme = if (dark) DarkScheme else LightScheme,
-            typography = Typography().withFont(Vazir),
+            typography = Typography().withFont(IranSans),
             shapes = Shapes(
                 extraSmall = RoundedCornerShape(10.dp), small = RoundedCornerShape(14.dp), medium = RoundedCornerShape(20.dp),
                 large = RoundedCornerShape(26.dp), extraLarge = RoundedCornerShape(32.dp),
