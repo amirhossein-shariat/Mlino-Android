@@ -19,12 +19,17 @@ jobs:
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
       - uses: gradle/actions/setup-gradle@v4
       - name: Core tests
-        run: ./gradlew :core:test --no-daemon --console=plain 2>&1 | tee core.log; test ${PIPESTATUS[0]} -eq 0
+        run: |
+          set -o pipefail
+          ./gradlew :core:test --no-daemon --console=plain 2>&1 | tee core.log
       - name: Debug APK
-        run: ./gradlew :app:assembleDebug --no-daemon --console=plain 2>&1 | tee app.log; test ${PIPESTATUS[0]} -eq 0
+        run: |
+          set -o pipefail
+          ./gradlew :app:assembleDebug --no-daemon --console=plain 2>&1 | tee app.log
       - name: Error summary
         if: failure()
-        run: grep -hE "^e: |error:|What went wrong|FAILED|Execution failed|> " core.log app.log 2>/dev/null | grep -v "^> Task" | awk '!seen[$0]++' | head -60
+        run: |
+          cat core.log app.log 2>/dev/null | grep -E '^e: |error:|What went wrong|Execution failed|FAILED' | awk '!seen[$0]++' | head -60
       - uses: actions/upload-artifact@v4
         with:
           name: mlino-debug-apk
