@@ -112,9 +112,10 @@ fun InboxScreen(s: UiState, vm: MainVm, modifier: Modifier = Modifier) {
                         } else {
                             LazyRow(contentPadding = PaddingValues(horizontal = 14.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 items(cats, key = { it.id }) { c ->
+                                    val ic = catIcon(c.id)
                                     FilterChip(
                                         selected = sel == c.id, onClick = { picks[t.id] = if (sel == c.id) null else c.id }, label = { Text(c.name) },
-                                        leadingIcon = catIcon(c.id)?.let { ic -> { Icon(ic, null, Modifier.size(16.dp)) } },
+                                        leadingIcon = if (ic != null) { { Icon(ic, null, Modifier.size(16.dp)) } } else null,
                                         shape = RoundedCornerShape(99.dp),
                                     )
                                 }

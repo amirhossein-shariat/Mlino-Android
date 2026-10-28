@@ -3,6 +3,7 @@ package app.malino.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -36,8 +37,8 @@ private enum class Tab(val label: String, val icon: ImageVector) {
 }
 
 @Composable
-fun MlinoRoot(vm: MainVm = viewModel()) {
-    MlinoTheme {
+fun MalinoRoot(vm: MainVm = viewModel()) {
+    MalinoTheme {
         val ctx = LocalContext.current
         val s by vm.state.collectAsStateWithLifecycle()
         val hidden by vm.hideBalance.collectAsStateWithLifecycle()
