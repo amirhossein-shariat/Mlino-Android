@@ -105,6 +105,8 @@ class MainVm(app: Application) : AndroidViewModel(app) {
     val recentRaw: StateFlow<List<RawE>> = repo.recentRaw.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val stats get() = repo.stats
     val security get() = repo.security
+    fun bankApps(): Set<String> = repo.bankPackages
+    fun setBankApp(pkg: String, on: Boolean) { repo.bankPackages = if (on) repo.bankPackages + pkg else repo.bankPackages - pkg }
     val lockEnabled = MutableStateFlow(repo.security.enabled)
     fun refreshLock() { lockEnabled.value = repo.security.enabled }
 

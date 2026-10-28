@@ -30,6 +30,7 @@ interface RawDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun put(r: RawE)
     @Query("SELECT * FROM raw WHERE state IN ('unparsed','unmapped') ORDER BY receivedAt DESC") fun observeAttention(): Flow<List<RawE>>
     @Query("SELECT * FROM raw WHERE state IN ('unparsed','unmapped')") suspend fun attention(): List<RawE>
+    @Query("SELECT COUNT(*) FROM raw WHERE sender = :sender AND body = :body") suspend fun sameCount(sender: String, body: String): Int
     @Query("SELECT * FROM raw ORDER BY receivedAt DESC LIMIT 30") fun observeRecent(): Flow<List<RawE>>
     @Query("UPDATE raw SET state = :state, txId = :txId WHERE id = :id") suspend fun setState(id: String, state: String, txId: String?)
 }

@@ -45,6 +45,11 @@ class Repo(ctx: Context) {
         get() = prefs.getStringSet("senders", DEFAULT_SENDERS) ?: DEFAULT_SENDERS
         set(v) { prefs.edit().putStringSet("senders", v).apply() }
 
+    /** Apps whose notifications are always kept (unparsed ones show up in the inbox for review). */
+    var bankPackages: Set<String>
+        get() = prefs.getStringSet("bank_pkgs", emptySet()) ?: emptySet()
+        set(v) { prefs.edit().putStringSet("bank_pkgs", v).apply() }
+
     fun looksLikeBank(sender: String, text: String): Boolean =
         bankSenders.any { sender.contains(it, ignoreCase = true) } || Parsers.parse(text, System.currentTimeMillis()) != null
 
@@ -62,8 +67,8 @@ class Repo(ctx: Context) {
             db.raw().put(RawE(rawId, msg.kind, msg.sender, msg.title, msg.body, msg.receivedMs, state, txId))
         when (res) {
             is IngestResult.Ignored -> null
-            IngestResult.Unparsed -> { raw("unparsed"); null }
-            is IngestResult.Unmapped -> { raw("unmapped"); null }
+            IngestResult.Unparsed -> { if (db.raw().sameCount(msg.sender, msg.body) == 0) raw("unparsed"); null }
+            is IngestResult.Unmapped -> { if (db.raw().sameCount(msg.sender, msg.body) == 0) raw("unmapped"); null }
             IngestResult.Duplicate -> { raw("duplicate"); null }
             is IngestResult.Created -> {
                 val withRule = res.txs.map { t -> if (t.id == res.newTxId) suggest(t) else t }

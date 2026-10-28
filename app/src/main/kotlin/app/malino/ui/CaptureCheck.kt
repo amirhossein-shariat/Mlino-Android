@@ -117,8 +117,10 @@ fun CaptureCheckScreen(s: UiState, vm: MainVm, onClose: () -> Unit, modifier: Mo
     val ctx = LocalContext.current
     var perms by remember { mutableStateOf(readPerms(ctx)) }
     var snap by remember { mutableStateOf<CaptureSnapshot>(vm.stats.snapshot()) }
+    var sources by remember { mutableStateOf(vm.stats.sources()) }
+    var bankApps by remember { mutableStateOf(vm.bankApps()) }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(Unit) { while (true) { snap = vm.stats.snapshot(); now = System.currentTimeMillis(); delay(1500) } }
+    LaunchedEffect(Unit) { while (true) { snap = vm.stats.snapshot(); sources = vm.stats.sources(); now = System.currentTimeMillis(); delay(1500) } }
     val raw by vm.recentRaw.collectAsState()
     var text by remember { mutableStateOf("") }
     var result by remember { mutableStateOf<MainVm.ParseCheck?>(null) }
@@ -155,6 +157,26 @@ fun CaptureCheckScreen(s: UiState, vm: MainVm, onClose: () -> Unit, modifier: Mo
         }
         item { Text("«شمارنده‌ی اعلان» با هر اعلان هر برنامه بالا می‌رود (فقط عدد شمرده می‌شود، متن ذخیره نمی‌شود). اگر بعد از اعلان بلو بالا نرفت، دسترسی اعلان فعال نیست.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp)) }
+
+        item { SectionTitle("برنامه‌های بانکی من") }
+        item {
+            Surface2 {
+                Text("برنامه‌ی بانکتان را اینجا روشن کنید تا همه‌ی اعلان‌های آن (حتی با قالب ناشناخته) برای بررسی در صندوق بیاید. برنامه‌ها بعد از اولین اعلانشان در این فهرست پیدا می‌شوند.",
+                    Modifier.padding(14.dp, 14.dp, 14.dp, 6.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                val shown = sources.filter { it.pkg != ctx.packageName }.take(12)
+                if (shown.isEmpty()) Text("هنوز اعلانی از برنامه‌ای دیده نشده؛ دسترسی اعلان باید روشن باشد.", Modifier.padding(14.dp), style = MaterialTheme.typography.bodySmall)
+                shown.forEach { src ->
+                    Row(Modifier.fillMaxWidth().padding(14.dp, 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(src.label, fontWeight = FontWeight.Medium, maxLines = 1)
+                            Text("${fa(src.count)} اعلان · ${src.pkg}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                        }
+                        Switch(src.pkg in bankApps, { on -> vm.setBankApp(src.pkg, on); bankApps = vm.bankApps() })
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+        }
 
         item { SectionTitle("تست یک پیام (ذخیره نمی‌شود)") }
         item {

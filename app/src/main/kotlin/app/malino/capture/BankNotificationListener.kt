@@ -1,6 +1,8 @@
 package app.malino.capture
 
 import android.app.Notification
+import android.content.pm.ApplicationInfo
+import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import app.malino.MalinoApp
@@ -15,9 +17,17 @@ class BankNotificationListener : NotificationListenerService() {
     override fun onListenerConnected() { app.repo.stats.listener(true) }
     override fun onListenerDisconnected() { app.repo.stats.listener(false) }
 
+    private fun appLabel(sbn: StatusBarNotification): String = runCatching {
+        val e = sbn.notification.extras
+        val info = if (Build.VERSION.SDK_INT >= 33) e.getParcelable("android.appInfo", ApplicationInfo::class.java)
+        else @Suppress("DEPRECATION") e.getParcelable<ApplicationInfo>("android.appInfo")
+        info?.loadLabel(applicationContext.packageManager)?.toString()
+    }.getOrNull().orEmpty().ifBlank { sbn.packageName }
+
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         if (sbn.packageName == packageName) return
         app.repo.stats.notifSeen()
+        app.repo.stats.source(sbn.packageName, appLabel(sbn))
         val e = sbn.notification.extras
         val title = (e.getCharSequence(Notification.EXTRA_TITLE) ?: e.getCharSequence(Notification.EXTRA_TITLE_BIG))?.toString().orEmpty()
         val main = (e.getCharSequence(Notification.EXTRA_BIG_TEXT) ?: e.getCharSequence(Notification.EXTRA_TEXT))?.toString().orEmpty()
@@ -25,7 +35,10 @@ class BankNotificationListener : NotificationListenerService() {
         val sub = e.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString().orEmpty()
         val body = listOf(main, lines, sub).filter { it.isNotBlank() }.distinct().joinToString("\n")
         if (body.isBlank()) return
-        if (Parsers.parse("$title\n$body", sbn.postTime) == null) return
+        val parsed = Parsers.parse("$title\n$body", sbn.postTime) != null
+        val chosen = sbn.packageName in app.repo.bankPackages
+        // Unknown layouts are kept only for apps the user marked as bank apps, and only when they contain a number.
+        if (!parsed && !(chosen && body.any { it.isDigit() })) return
         app.repo.stats.bankHit("notif")
         app.appScope.launch {
             val id = app.repo.ingest(RawMsg("notif", sbn.packageName, title, body, sbn.postTime))
