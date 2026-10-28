@@ -101,6 +101,7 @@ fun MalinoRoot(vm: MainVm = viewModel()) {
                     Page.Assets -> AssetsPage(s, vm, onClose = { page = null })
                     Page.Security -> SecurityPage(vm, onClose = { page = null })
                     Page.Data -> DataPage(s, vm, onClose = { page = null })
+                    Page.Statement -> StatementPage(s, vm, onClose = { page = null })
                     null -> {}
                 }
             }

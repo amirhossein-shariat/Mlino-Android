@@ -142,6 +142,14 @@ class MainVm(app: Application) : AndroidViewModel(app) {
             .onFailure { dataMsg.value = "انجام نشد." }
     }
 
+    val statementMsg = MutableStateFlow<String?>(null)
+    fun importStatement(cardId: String, rows: List<Statement.Row>) = io {
+        statementMsg.value = runCatching {
+            val r = repo.importStatement(cardId, rows)
+            "${fa(r.added)} تراکنش اضافه شد" + if (r.duplicates > 0) " و ${fa(r.duplicates)} ردیف تکراری رد شد." else "."
+        }.getOrElse { "وارد کردن ناموفق بود." }
+    }
+
     fun exportXlsx(ctx: Context, uri: android.net.Uri, from: Long, to: Long) = io {
         dataMsg.value = runCatching {
             val st = state.value

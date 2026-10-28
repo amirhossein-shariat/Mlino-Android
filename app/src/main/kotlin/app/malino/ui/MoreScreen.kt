@@ -50,7 +50,8 @@ fun MoreScreen(s: UiState, vm: MainVm, perms: Perms, onOpenCheck: () -> Unit, on
         item {
             Surface2(Modifier.enter(2)) {
                 CheckRow("امنیت و قفل", "پین، اثر انگشت، قفل خودکار", null) { onPage(Page.Security) }
-                CheckRow("پشتیبان و خروجی", "پشتیبان‌گیری، بازیابی، خروجی اکسل", null) { onPage(Page.Data) }
+                CheckRow("پشتیبان و خروجی", "پشتیبان‌گیری، بازیابی، خروجی اکسل، ریست", null) { onPage(Page.Data) }
+                CheckRow("وارد کردن صورت‌حساب بانک", "پرینت، عکس یا اکسل بانک با کمک هوش مصنوعی", null) { onPage(Page.Statement) }
             }
         }
 

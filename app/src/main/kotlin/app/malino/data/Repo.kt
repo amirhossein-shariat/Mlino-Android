@@ -138,6 +138,36 @@ class Repo(ctx: Context) {
         db.cards().delete(c); return true
     }
 
+    data class ImportResult(val added: Int, val duplicates: Int)
+
+    /** Adds the rows of a statement as confirmed transactions. Rows already known (same card, direction, amount, balance, minute) are skipped. */
+    suspend fun importStatement(cardId: String, rows: List<Statement.Row>): ImportResult = db.withTransaction {
+        val card = db.cards().all().firstOrNull { it.id == cardId }?.toCore() ?: return@withTransaction ImportResult(0, 0)
+        val sorted = rows.sortedBy { it.at }
+        if (sorted.isEmpty()) return@withTransaction ImportResult(0, 0)
+        val known = db.tx().between(sorted.first().at - 86_400_000L, sorted.last().at + 86_400_000L).filter { it.cardId == cardId }.mapNotNull { it.dedupe }.toHashSet()
+        var dup = 0
+        val fresh = ArrayList<Tx>()
+        for ((i, r) in sorted.withIndex()) {
+            val key = Ingest.dedupeKey(cardId, r.out, r.amount, r.balance ?: -1L, r.at)
+            if (key in known) { dup++; continue }
+            val base = Tx(newId(), cardId, r.at, if (r.out) TxType.OUT else TxType.IN, r.amount, balanceAfter = r.balance, note = r.note,
+                source = "import", status = TxStatus.CONFIRMED, dedupe = key, createdAt = r.at + i)
+            fresh.add(suggest(base))
+        }
+        // the statement is older than the card's start: move the start back, opening balance derived from the first row that has a balance
+        val first = fresh.firstOrNull()
+        if (first != null && first.at < card.openingAt) {
+            val k = fresh.indexOfFirst { it.balanceAfter != null }
+            if (k >= 0) {
+                val opening = fresh[k].balanceAfter!! - fresh.take(k + 1).sumOf { Ledger.effect(it) }
+                db.cards().upsert(card.copy(openingAt = first.at - 1000, openingBalance = opening).toE())
+            }
+        }
+        db.tx().upsert(fresh.map { it.toE() })
+        ImportResult(fresh.size, dup)
+    }
+
     enum class Reset { AllTx, TxRange, Learned, Log, Plan, Everything }
 
     /** Destructive clean-ups offered in settings (the caller makes a safety backup first). [to] is exclusive. */
