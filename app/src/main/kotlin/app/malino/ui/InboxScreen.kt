@@ -20,6 +20,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import app.malino.core.Jalali
 import app.malino.core.TxType
 
 /** Swipe either way to confirm; the green strip behind the card shows what will happen. */
@@ -152,6 +153,12 @@ private fun GapCard(g: GapUi, s: UiState, vm: MainVm, snoozed: Boolean, modifier
     var type by remember { mutableStateOf(types.first().first) }
     var cat by remember { mutableStateOf<String?>(null) }
     var note by remember { mutableStateOf("") }
+    // suggested date: the day of the message that revealed the gap, but any day inside the period is fine
+    var at by remember { mutableLongStateOf((g.gap.at - 1000).coerceAtLeast(g.gap.from + 1)) }
+    val dt = Jalali.fromMillis(at)
+    var hh by remember { mutableStateOf(two(dt.h)) }
+    var mm by remember { mutableStateOf(two(dt.mi)) }
+    var pickDate by remember { mutableStateOf(false) }
     val cats = remember(s.categories, type) { s.categories.filter { it.kind == if (type == TxType.IN) "income" else "expense" } }
     val amount = money(kotlin.math.abs(g.gap.diff))
     Column(modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(ex.warnBg).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -176,11 +183,31 @@ private fun GapCard(g: GapUi, s: UiState, vm: MainVm, snoozed: Boolean, modifier
             if (type == TxType.OUT || type == TxType.IN) LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(cats, key = { it.id }) { c -> FilterChip(cat == c.id, { cat = if (cat == c.id) null else c.id }, { Text(c.name) }, shape = RoundedCornerShape(99.dp)) }
             }
+            Text(
+                when (type) {
+                    TxType.OUT -> "هزینه: خرجی که پیامکش نرسیده. در گزارش هزینه‌ها و دسته‌بندی حساب می‌شود."
+                    TxType.FEE -> "کارمزد: کارمزد بانکی (مثلاً انتقال یا کارت). جزو هزینه‌ی «کارمزد بانکی» حساب می‌شود."
+                    TxType.IN -> "درآمد: واریزی که پیامکش نرسیده. در گزارش درآمد حساب می‌شود."
+                    else -> "تعدیل: فقط مانده را با بانک یکی می‌کند و جزو هزینه یا درآمد نیست. وقتی علت را نمی‌دانید این را بزنید."
+                },
+                color = ex.warn, style = MaterialTheme.typography.labelSmall,
+            )
             OutlinedTextField(note, { note = it }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("یادداشت (اختیاری)") }, shape = RoundedCornerShape(14.dp))
-            Text(if (type == TxType.ADJUST) "«تعدیل» فقط مانده را درست می‌کند و جزو هزینه یا درآمد نیست." else "این مبلغ به‌عنوان تراکنش در همان بازه ثبت می‌شود.",
-                color = ex.warn, style = MaterialTheme.typography.labelSmall)
+            Text("تاریخ ثبت (پیشنهاد: روز آخرین پیامک؛ می‌توانید هر روز داخل بازه‌ی اختلاف را بگذارید):", color = ex.warn, style = MaterialTheme.typography.labelSmall)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                OutlinedButton({ pickDate = true }, shape = RoundedCornerShape(14.dp)) { Text(fullDate(at)) }
+                OutlinedTextField(hh, { hh = digitsOnly(it).take(2) }, Modifier.width(72.dp), singleLine = true, label = { Text("ساعت") }, shape = RoundedCornerShape(14.dp),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number))
+                OutlinedTextField(mm, { mm = digitsOnly(it).take(2) }, Modifier.width(72.dp), singleLine = true, label = { Text("دقیقه" ) }, shape = RoundedCornerShape(14.dp),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number))
+            }
+            Text("بازه‌ی مجاز: ${dayLabel(g.gap.from)} ${clock(g.gap.from)} تا ${dayLabel(g.gap.at)} ${clock(g.gap.at)}", color = ex.warn, style = MaterialTheme.typography.labelSmall)
+            if (pickDate) JalaliPickerDialog(dt.date, { pickDate = false }) { d -> at = Jalali.toMillis(d.y, d.m, d.d, dt.h, dt.mi); pickDate = false }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button({ vm.resolveGap(g.gap, type, cat, note.trim()) }, colors = ButtonDefaults.buttonColors(containerColor = ex.warn, contentColor = ex.warnBg)) { Text("ثبت") }
+                Button({
+                    val d = Jalali.fromMillis(at).date
+                    vm.resolveGap(g.gap, type, cat, note.trim(), Jalali.toMillis(d.y, d.m, d.d, (hh.toIntOrNull() ?: 0).coerceIn(0, 23), (mm.toIntOrNull() ?: 0).coerceIn(0, 59)))
+                }, colors = ButtonDefaults.buttonColors(containerColor = ex.warn, contentColor = ex.warnBg)) { Text("ثبت") }
                 TextButton({ open = false }) { Text("انصراف") }
                 if (!snoozed) TextButton({ vm.snoozeGap(g.gap.txId, true) }) { Text("بعداً") }
             }

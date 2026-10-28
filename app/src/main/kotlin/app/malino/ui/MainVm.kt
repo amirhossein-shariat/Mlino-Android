@@ -134,6 +134,14 @@ class MainVm(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Safety backup first, then the clean-up. [to] is exclusive. */
+    fun reset(ctx: Context, kind: app.malino.data.Repo.Reset, from: Long = 0, to: Long = Long.MAX_VALUE) = io {
+        val saved = app.malino.data.Backup.safety(ctx, repo)
+        runCatching { repo.reset(kind, from, to) }
+            .onSuccess { dataMsg.value = "انجام شد." + if (saved) " یک نسخه‌ی ایمنی قبل از آن در «پشتیبان‌های خودکار» ذخیره شد." else "" }
+            .onFailure { dataMsg.value = "انجام نشد." }
+    }
+
     fun exportXlsx(ctx: Context, uri: android.net.Uri, from: Long, to: Long) = io {
         dataMsg.value = runCatching {
             val st = state.value
@@ -170,7 +178,7 @@ class MainVm(app: Application) : AndroidViewModel(app) {
     fun saveTx(t: Tx) = io { repo.saveTx(t) }
     fun deleteTx(id: String) = io { repo.deleteTx(id) }
     fun saveCard(c: Card) = io { repo.saveCard(c) }
-    fun resolveGap(g: Ledger.Gap, type: TxType, cat: String?, note: String) = io { repo.resolveGap(g, type, cat, note) }
+    fun resolveGap(g: Ledger.Gap, type: TxType, cat: String?, note: String, at: Long) = io { repo.resolveGap(g, type, cat, note, at) }
     fun snoozeGap(txId: String, on: Boolean) = repo.snoozeGap(txId, on)
     fun unlink(txId: String) = io { repo.unlinkTransfer(txId) }
     fun dismissRaw(id: String) = io { repo.dismissRaw(id) }

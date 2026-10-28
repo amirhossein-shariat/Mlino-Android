@@ -11,6 +11,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.foundation.border
 import androidx.compose.material.icons.automirrored.rounded.Backspace
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material3.*
@@ -158,9 +160,15 @@ private fun Keypad(onKey: (String) -> Unit) {
     }
 }
 
-private val SWATCHES = listOf(0xFF14304F, 0xFF1F5C7A, 0xFF12805C, 0xFFC98B1E, 0xFFC93B3B, 0xFF7A4FB5)
+private val SWATCHES = listOf(
+    0xFF14304F, 0xFF1F5C7A, 0xFF12805C, 0xFFC98B1E, 0xFFC93B3B, 0xFF7A4FB5,
+    0xFF1B1B1F, 0xFFF4F5F7, 0xFF4B5563, 0xFFB8BEC8,   // black, white, dark grey, light grey
+    0xFFE0A800, 0xFFF3DC7A, 0xFFE8731A,               // strong yellow, light yellow, orange
+    0xFF6D3FB0, 0xFFB9A2E0,                           // strong purple, light purple
+)
 
 /** Add / edit a card. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CardDialog(card: Card?, newId: () -> String, onSave: (Card) -> Unit, onDelete: (() -> Unit)?, onDismiss: () -> Unit, isNew: Boolean = card == null) {
     var name by remember { mutableStateOf(card?.name.orEmpty()) }
@@ -190,10 +198,17 @@ fun CardDialog(card: Card?, newId: () -> String, onSave: (Card) -> Unit, onDelet
                     visualTransformation = ThousandsTransformation, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     supportingText = { if (opening.isNotEmpty()) Text(money(opening.toLongOrNull() ?: 0) + " ریال") })
                 OutlinedButton({ pick = true }) { Text("از تاریخ " + fullDate(openingAt)) }
-                Row(Modifier.padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                // the picked colour gets a thick ring and a check mark so it is obvious which one is selected
+                FlowRow(Modifier.padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     SWATCHES.forEach { c ->
-                        val sc by animateFloatAsState(if (color == c) 1.2f else 1f, spring(dampingRatio = 0.5f), label = "sw")
-                        Box(Modifier.size(30.dp).graphicsLayer { scaleX = sc; scaleY = sc }.clip(CircleShape).background(Color(c)).pressScale { color = c })
+                        val on = color == c
+                        val sc by animateFloatAsState(if (on) 1.15f else 1f, spring(dampingRatio = 0.5f), label = "sw")
+                        Box(
+                            Modifier.size(34.dp).graphicsLayer { scaleX = sc; scaleY = sc }
+                                .border(if (on) 3.dp else 1.dp, if (on) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline, CircleShape)
+                                .padding(if (on) 4.dp else 0.dp).clip(CircleShape).background(Color(c)).pressScale { color = c },
+                            contentAlignment = Alignment.Center,
+                        ) { if (on) Icon(Icons.Rounded.Check, null, tint = cardInk(Color(c)), modifier = Modifier.size(16.dp)) }
                     }
                 }
             }

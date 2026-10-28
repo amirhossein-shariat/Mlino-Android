@@ -44,6 +44,7 @@ fun CardSheet(cu: CardUi, s: UiState, onEdit: () -> Unit, onDismiss: () -> Unit)
         }
     }
     val base = Color(c.color)
+    val ink = cardInk(base)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -52,21 +53,21 @@ fun CardSheet(cu: CardUi, s: UiState, onEdit: () -> Unit, onDismiss: () -> Unit)
         // fixed height: switching filters must not resize the sheet; only the list below scrolls
         Column(Modifier.fillMaxWidth().fillMaxHeight(.92f).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Column(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(Brush.linearGradient(listOf(lerp(base, Color.White, .12f), lerp(base, Color.Black, .42f)))).padding(18.dp),
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(cardBrush(base)).padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 Row(verticalAlignment = Alignment.Top) {
                     Column(Modifier.weight(1f)) {
-                        Text(c.bank.ifBlank { c.name }, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 22.sp)
+                        Text(c.bank.ifBlank { c.name }, color = ink, fontWeight = FontWeight.Bold, fontSize = 22.sp)
                         Text(listOf(c.name.takeIf { c.bank.isNotBlank() }, c.purpose.takeIf { it.isNotBlank() && it != c.name }).filterNotNull().joinToString(" · "),
-                            color = Color.White.copy(alpha = .88f), style = MaterialTheme.typography.bodyMedium)
+                            color = ink.copy(alpha = .88f), style = MaterialTheme.typography.bodyMedium)
                     }
-                    if (c.last4.isNotBlank()) Text("⁦•••• ${Jalali.toFa(c.last4)}⁩", color = Color.White.copy(alpha = .85f), style = MaterialTheme.typography.labelMedium)
+                    if (c.last4.isNotBlank()) Text("⁦•••• ${Jalali.toFa(c.last4)}⁩", color = ink.copy(alpha = .85f), style = MaterialTheme.typography.labelMedium)
                 }
                 Spacer(Modifier.height(10.dp))
                 Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    AnimatedMoney(cu.balance, MaterialTheme.typography.headlineMedium.copy(fontSize = 30.sp, fontWeight = FontWeight.Bold), Color.White)
-                    Text("ریال", color = Color.White.copy(alpha = .8f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 5.dp))
+                    AnimatedMoney(cu.balance, MaterialTheme.typography.headlineMedium.copy(fontSize = 30.sp, fontWeight = FontWeight.Bold), ink)
+                    Text("ریال", color = ink.copy(alpha = .8f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 5.dp))
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

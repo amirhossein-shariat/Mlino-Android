@@ -7,6 +7,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountBalance
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Smartphone
+import androidx.compose.material.icons.rounded.School
+import androidx.compose.material.icons.rounded.Movie
+import androidx.compose.material.icons.rounded.CardGiftcard
+import androidx.compose.material.icons.rounded.TrendingUp
+import androidx.compose.material.icons.rounded.Percent
+import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.BusinessCenter
 import androidx.compose.material.icons.rounded.Description
@@ -28,6 +36,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,6 +61,14 @@ fun catIcon(id: String?): ImageVector? = when (id) {
     "invoice" -> Icons.Rounded.Description
     "salary" -> Icons.Rounded.Payments
     "roundup" -> Icons.Rounded.Savings
+    "rent" -> Icons.Rounded.Home
+    "telecom" -> Icons.Rounded.Smartphone
+    "edu" -> Icons.Rounded.School
+    "fun" -> Icons.Rounded.Movie
+    "gift", "gift_in" -> Icons.Rounded.CardGiftcard
+    "invest" -> Icons.Rounded.TrendingUp
+    "interest" -> Icons.Rounded.Percent
+    "refund" -> Icons.Rounded.Replay
     "other_out", "other_in" -> Icons.Rounded.MoreHoriz
     else -> null
 }
@@ -130,5 +149,12 @@ fun EmptyState(title: String, hint: String, modifier: Modifier = Modifier) =
 fun cardLabel(c: app.malino.core.Card?): String = when {
     c == null -> ""
     c.bank.isBlank() -> c.name
-    else -> "${c.bank} (${c.name})"
+    else -> (if (c.bank.trim().startsWith("بانک")) c.bank.trim() else "بانک ${c.bank.trim()}") + " (${c.name})"
 }
+
+/** Light card colours get a light gradient and dark text; the rest keep white text. */
+fun cardInk(base: Color): Color = if (base.luminance() > .5f) Color(0xFF14202B) else Color.White
+
+fun cardBrush(base: Color): Brush =
+    if (base.luminance() > .5f) Brush.linearGradient(listOf(Color.White, lerp(base, Color.Black, .14f)))
+    else Brush.linearGradient(listOf(lerp(base, Color.White, .12f), lerp(base, Color.Black, .42f)))

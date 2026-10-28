@@ -138,6 +138,30 @@ class Repo(ctx: Context) {
         db.cards().delete(c); return true
     }
 
+    enum class Reset { AllTx, TxRange, Learned, Log, Plan, Everything }
+
+    /** Destructive clean-ups offered in settings (the caller makes a safety backup first). [to] is exclusive. */
+    suspend fun reset(kind: Reset, from: Long = 0, to: Long = Long.MAX_VALUE) {
+        when (kind) {
+            Reset.AllTx -> db.withTransaction { db.tx().deleteAll(); db.raw().deleteAll() }
+            Reset.TxRange -> db.tx().deleteBetween(from, to)
+            Reset.Learned -> { db.rules().deleteAll(); saveTemplates(emptyList()); ignoreWords = Parsers.DEFAULT_IGNORE_WORDS.toSet() }
+            Reset.Log -> db.raw().deleteAll()
+            Reset.Plan -> resetPlan()
+            Reset.Everything -> {
+                db.withTransaction { db.tx().deleteAll(); db.raw().deleteAll(); db.rules().deleteAll(); db.cards().deleteAll(); db.categories().deleteAll() }
+                resetPlan(); saveTemplates(emptyList())
+                prefs.edit().remove("ignore_words").remove("bank_pkgs").remove("gap_snooze").apply()
+                snoozedGaps.value = emptySet()
+                seedCategories()
+            }
+        }
+    }
+
+    private fun resetPlan() {
+        saveBudgets(emptyList()); saveDebts(emptyList()); saveGoals(emptyList()); saveAssets(emptyList()); savePrices(Prices())
+    }
+
     /** Gaps the user postponed; they stay faded in the list but leave the inbox badge. */
     val snoozedGaps = kotlinx.coroutines.flow.MutableStateFlow(prefs.getStringSet("gap_snooze", emptySet()) ?: emptySet())
     fun snoozeGap(txId: String, on: Boolean) {
@@ -147,9 +171,10 @@ class Repo(ctx: Context) {
     }
 
     /** Adds the missing amount of a gap as the transaction the user chose, inside the gap's period (just before the message that revealed it). */
-    suspend fun resolveGap(gap: Ledger.Gap, type: TxType, categoryId: String?, note: String) {
+    suspend fun resolveGap(gap: Ledger.Gap, type: TxType, categoryId: String?, note: String, chosenAt: Long? = null) {
         val t = db.tx().get(gap.txId)?.toCore() ?: return
-        val at = minOf(maxOf(gap.from + 1, t.at - 1000), t.at - 1)
+        // anywhere inside the gap period; outside it the balance would not add up again
+        val at = (chosenAt ?: (t.at - 1000)).coerceIn(gap.from + 1, t.at - 1)
         val amount = kotlin.math.abs(gap.diff)
         val fix = when (type) {
             TxType.OUT -> Tx(newId(), gap.cardId, at, TxType.OUT, amount, note = note, categoryId = categoryId)
@@ -188,6 +213,12 @@ class Repo(ctx: Context) {
             CategoryE("invoice", "درآمد فاکتور", "income", true, 10), CategoryE("salary", "حقوق و درآمد", "income", false, 11),
             CategoryE("other_in", "سایر", "income", false, 12),
             CategoryE(Ingest.ROUNDUP, "پس‌انداز رُند", "expense", false, 13),
+            // added later: insertMissing adds them on update without touching what the user already has
+            CategoryE("rent", "اجاره و مسکن", "expense", false, 14), CategoryE("telecom", "موبایل و اینترنت", "expense", false, 15),
+            CategoryE("edu", "آموزش", "expense", false, 16), CategoryE("fun", "تفریح و رستوران", "expense", false, 17),
+            CategoryE("gift", "هدیه و کمک", "expense", false, 18), CategoryE("invest", "سرمایه‌گذاری", "expense", false, 19),
+            CategoryE("interest", "سود سپرده", "income", false, 20), CategoryE("refund", "بازگشت وجه", "income", false, 21),
+            CategoryE("gift_in", "هدیه", "income", false, 22),
         )
     }
 }

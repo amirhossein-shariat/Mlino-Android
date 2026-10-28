@@ -141,6 +141,7 @@ fun DataPage(s: UiState, vm: MainVm, onClose: () -> Unit, modifier: Modifier = M
     val staged by vm.restoreStaged.collectAsState()
     var range by remember { mutableIntStateOf(0) }
     var confirmRestore by remember { mutableStateOf<(() -> Unit)?>(null) }
+    var resetAsk by remember { mutableStateOf<ResetAsk?>(null) }
     val auto = remember(msg) { Backup.listAuto(ctx) }
     val d = Jalali.today()
 
@@ -200,8 +201,25 @@ fun DataPage(s: UiState, vm: MainVm, onClose: () -> Unit, modifier: Modifier = M
                 }
             }
         }
+
+        item { SectionTitle("پاک‌سازی و ریست") }
+        item {
+            Surface2 {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("قبل از هر پاک‌سازی، برنامه خودش یک نسخه‌ی ایمنی می‌گیرد؛ اگر پشیمان شدید از «پشتیبان‌های خودکار» بازیابی کنید.",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    OutlinedButton({ resetAsk = ResetAsk.Range }, Modifier.fillMaxWidth()) { Text("حذف تراکنش‌های یک بازه‌ی زمانی") }
+                    OutlinedButton({ resetAsk = ResetAsk.AllTx }, Modifier.fillMaxWidth()) { Text("حذف همه‌ی تراکنش‌ها (کارت‌ها می‌مانند)") }
+                    OutlinedButton({ resetAsk = ResetAsk.Learned }, Modifier.fillMaxWidth()) { Text("فراموش کردن چیزهایی که برنامه یاد گرفته") }
+                    OutlinedButton({ resetAsk = ResetAsk.Log }, Modifier.fillMaxWidth()) { Text("پاک کردن گزارش پیام‌های خام ثبت خودکار") }
+                    OutlinedButton({ resetAsk = ResetAsk.Plan }, Modifier.fillMaxWidth()) { Text("حذف بودجه، اقساط، اهداف و دارایی‌ها") }
+                    Button({ resetAsk = ResetAsk.Everything }, Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = extra.expense, contentColor = androidx.compose.ui.graphics.Color.White)) { Text("ریست کامل برنامه", fontWeight = FontWeight.Bold) }
+                }
+            }
+        }
     }
 
+    resetAsk?.let { ask -> ResetDialog(ask, onDismiss = { resetAsk = null }) { kind, from, to -> resetAsk = null; vm.reset(ctx, kind, from, to) } }
     confirmRestore?.let { go ->
         AlertDialog(
             onDismissRequest = { confirmRestore = null }, title = { Text("بازیابی پشتیبان؟") },
@@ -226,5 +244,46 @@ private fun autoLabel(f: File): String {
     val m = Regex("(\\d{4})(\\d{2})(\\d{2})").find(f.name)?.destructured ?: return f.name
     val (y, mo, da) = m
     val j = Jalali.toJalali(y.toInt(), mo.toInt(), da.toInt())
-    return "پشتیبان ${Jalali.format(j)}"
+    return if (f.name.contains("safety")) "نسخه‌ی ایمنی قبل از پاک‌سازی ${Jalali.format(j)}" else "پشتیبان ${Jalali.format(j)}"
+}
+
+private enum class ResetAsk(val title: String, val body: String, val kind: app.malino.data.Repo.Reset) {
+    Range("حذف تراکنش‌های یک بازه", "همه‌ی تراکنش‌های بین دو تاریخ حذف می‌شوند. کارت‌ها و تنظیمات می‌مانند و مانده‌ی کارت‌ها دوباره حساب می‌شود.", app.malino.data.Repo.Reset.TxRange),
+    AllTx("حذف همه‌ی تراکنش‌ها", "همه‌ی تراکنش‌ها و پیام‌های ثبت‌شده حذف می‌شوند. کارت‌ها، بودجه و تنظیمات می‌مانند و مانده‌ی هر کارت به موجودی اولیه برمی‌گردد.", app.malino.data.Repo.Reset.AllTx),
+    Learned("فراموش کردن آموخته‌ها", "دسته‌هایی که برنامه برای مبلغ‌های تکراری پیشنهاد می‌داد، قالب‌هایی که با «یاد بده» ساخته‌اید و کلمه‌های نادیده‌گرفته‌شده به حالت اول برمی‌گردند. تراکنش‌ها دست نمی‌خورند.", app.malino.data.Repo.Reset.Learned),
+    Log("پاک کردن گزارش پیام‌ها", "گزارش پیام‌های خام و پیام‌های شناخته‌نشده‌ی صندوق ورودی پاک می‌شود. تراکنش‌های ثبت‌شده دست نمی‌خورند.", app.malino.data.Repo.Reset.Log),
+    Plan("حذف برنامه‌ریزی", "بودجه‌ها، اقساط و بدهی‌ها، اهداف، دارایی‌ها و قیمت‌ها حذف می‌شوند. تراکنش‌ها و کارت‌ها می‌مانند.", app.malino.data.Repo.Reset.Plan),
+    Everything("ریست کامل برنامه", "کارت‌ها، تراکنش‌ها، بودجه، اقساط، دارایی‌ها و هر چیزی که برنامه یاد گرفته حذف می‌شود و برنامه مثل روز اول می‌شود. فقط پین و قفل برنامه می‌ماند.", app.malino.data.Repo.Reset.Everything),
+}
+
+@Composable
+private fun ResetDialog(ask: ResetAsk, onDismiss: () -> Unit, onGo: (app.malino.data.Repo.Reset, Long, Long) -> Unit) {
+    val today = remember { Jalali.today() }
+    var from by remember { mutableStateOf(Jalali.addDays(today, -30)) }
+    var to by remember { mutableStateOf(today) }
+    var pick by remember { mutableIntStateOf(0) }
+    var typed by remember { mutableStateOf("") }
+    val hard = ask == ResetAsk.Everything
+    AlertDialog(
+        onDismissRequest = onDismiss, title = { Text(ask.title) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(ask.body)
+                if (ask == ResetAsk.Range) {
+                    OutlinedButton({ pick = 1 }) { Text("از " + Jalali.format(from)) }
+                    OutlinedButton({ pick = 2 }) { Text("تا " + Jalali.format(to) + " (همان روز هم حذف می‌شود)") }
+                }
+                if (hard) OutlinedTextField(typed, { typed = it }, singleLine = true, label = { Text("برای تأیید بنویسید: ریست") })
+            }
+        },
+        confirmButton = {
+            TextButton(
+                { onGo(ask.kind, Jalali.toMillis(from.y, from.m, from.d), Jalali.toMillis(to.y, to.m, to.d) + 86_400_000L) },
+                enabled = (!hard || typed.trim() == "ریست") && (ask != ResetAsk.Range || Jalali.toMillis(from.y, from.m, from.d) <= Jalali.toMillis(to.y, to.m, to.d)),
+            ) { Text("حذف", fontWeight = FontWeight.Bold) }
+        },
+        dismissButton = { TextButton(onDismiss) { Text("انصراف") } },
+    )
+    if (pick == 1) JalaliPickerDialog(from, { pick = 0 }) { from = it; pick = 0 }
+    if (pick == 2) JalaliPickerDialog(to, { pick = 0 }) { to = it; pick = 0 }
 }

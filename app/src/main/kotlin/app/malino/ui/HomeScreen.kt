@@ -203,29 +203,30 @@ private fun Quick(label: String, icon: ImageVector, bg: Color, fg: Color, modifi
 @Composable
 private fun BankCard(c: CardUi, hidden: Boolean, onClick: () -> Unit) {
     val base = Color(c.card.color)
+    val ink = cardInk(base)
     val chip = Brush.linearGradient(listOf(Color(0xFFF6DD9A), Color(0xFFC9A24B)))
     Box(
         Modifier.width(232.dp).height(140.dp).clip(RoundedCornerShape(24.dp)).pressScale(onClick)
-            .background(Brush.linearGradient(listOf(lerp(base, Color.White, .12f), lerp(base, Color.Black, .42f)))),
+            .background(cardBrush(base)),
     ) {
-        Canvas(Modifier.matchParentSize()) { drawCircle(Color.White.copy(alpha = .10f), 75.dp.toPx(), Offset(20.dp.toPx(), size.height - 5.dp.toPx())) }
+        Canvas(Modifier.matchParentSize()) { drawCircle(ink.copy(alpha = .10f), 75.dp.toPx(), Offset(20.dp.toPx(), size.height - 5.dp.toPx())) }
         Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.SpaceBetween) {
             Row(verticalAlignment = Alignment.Top) {
                 Column(Modifier.weight(1f)) {
-                    Text(c.card.bank.ifBlank { c.card.name }, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp, maxLines = 1)
+                    Text(c.card.bank.ifBlank { c.card.name }, color = ink, fontWeight = FontWeight.Bold, fontSize = 20.sp, maxLines = 1)
                     Text(listOf(c.card.name.takeIf { c.card.bank.isNotBlank() }, c.card.purpose.takeIf { it.isNotBlank() && it != c.card.name }).filterNotNull().joinToString(" · "),
-                        color = Color.White.copy(alpha = .88f), style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                        color = ink.copy(alpha = .88f), style = MaterialTheme.typography.bodySmall, maxLines = 1)
                 }
                 Box(Modifier.size(30.dp, 22.dp).clip(RoundedCornerShape(6.dp)).background(chip))
             }
             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                if (hidden) Text("••••••", color = Color.White, style = MaterialTheme.typography.titleLarge)
-                else AnimatedMoney(c.balance, MaterialTheme.typography.titleLarge.copy(fontSize = 21.sp), Color.White)
-                Text("ریال", color = Color.White.copy(alpha = .8f), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(bottom = 4.dp))
+                if (hidden) Text("••••••", color = ink, style = MaterialTheme.typography.titleLarge)
+                else AnimatedMoney(c.balance, MaterialTheme.typography.titleLarge.copy(fontSize = 21.sp), ink)
+                Text("ریال", color = ink.copy(alpha = .8f), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(bottom = 4.dp))
             }
             Row {
                 Spacer(Modifier.weight(1f))
-                if (c.card.last4.isNotBlank()) Text("⁦•••• ${Jalali.toFa(c.card.last4)}⁩", color = Color.White.copy(alpha = .85f), style = MaterialTheme.typography.labelSmall)
+                if (c.card.last4.isNotBlank()) Text("⁦•••• ${Jalali.toFa(c.card.last4)}⁩", color = ink.copy(alpha = .85f), style = MaterialTheme.typography.labelSmall)
             }
         }
     }

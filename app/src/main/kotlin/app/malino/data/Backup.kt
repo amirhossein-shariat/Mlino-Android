@@ -46,7 +46,17 @@ object Backup {
         autoDir(ctx).listFiles { x -> x.name.startsWith("malino-auto-") }?.sortedByDescending { it.name }?.drop(7)?.forEach { it.delete() }
     }
 
-    fun listAuto(ctx: Context): List<File> = autoDir(ctx).listFiles { x -> x.name.startsWith("malino-auto-") }?.sortedByDescending { it.name } ?: emptyList()
+    /** Taken right before a destructive clean-up; the newest 3 are kept. */
+    fun safety(ctx: Context, repo: Repo): Boolean {
+        val d = Jalali.today(); val t = Jalali.fromMillis(System.currentTimeMillis())
+        val f = File(autoDir(ctx), "malino-safety-%04d%02d%02d-%02d%02d%02d.zip".format(d.y, d.m, d.d, t.h, t.mi, (System.currentTimeMillis() / 1000 % 60).toInt()))
+        val ok = runCatching { f.outputStream().use { write(ctx, repo, it) } }.isSuccess
+        if (!ok) f.delete()
+        autoDir(ctx).listFiles { x -> x.name.startsWith("malino-safety-") }?.sortedByDescending { it.name }?.drop(3)?.forEach { it.delete() }
+        return ok
+    }
+
+    fun listAuto(ctx: Context): List<File> = autoDir(ctx).listFiles { x -> x.name.startsWith("malino-auto-") || x.name.startsWith("malino-safety-") }?.sortedByDescending { it.name } ?: emptyList()
 
     sealed interface Staged { data object Ok : Staged; data class Fail(val why: String) : Staged }
 

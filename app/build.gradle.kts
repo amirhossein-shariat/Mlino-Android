@@ -13,12 +13,18 @@ android {
         applicationId = "app.malino"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
+        // CI run number: every build is newer than the last, so it installs over the previous one
+        versionCode = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
         versionName = "0.1.0"
         resourceConfigurations += "fa"
     }
 
     signingConfigs {
+        // one fixed key for all test (debug) builds, so every new APK updates the installed app and keeps its data
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"; keyAlias = "androiddebugkey"; keyPassword = "android"
+        }
         create("release") {
             val ks = System.getenv("MALINO_KEYSTORE")
             if (ks != null) {
