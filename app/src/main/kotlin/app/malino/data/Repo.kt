@@ -35,7 +35,7 @@ class Repo(ctx: Context) {
         val near = db.tx().between(msg.receivedMs - 2 * 86_400_000L, msg.receivedMs + 86_400_000L).map { it.toCore() }
         val res = Ingest.process(msg, cards, near, ::newId)
         val rawId = newId()
-        fun raw(state: String, txId: String? = null) =
+        suspend fun raw(state: String, txId: String? = null) =
             db.raw().put(RawE(rawId, msg.kind, msg.sender, msg.title, msg.body, msg.receivedMs, state, txId))
         when (res) {
             is IngestResult.Ignored -> null
