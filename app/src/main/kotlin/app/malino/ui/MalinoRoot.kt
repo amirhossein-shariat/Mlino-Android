@@ -47,6 +47,7 @@ fun MalinoRoot(vm: MainVm = viewModel()) {
         LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { perms = readPerms(ctx) }
         var onboarded by remember { mutableStateOf(vm.onboarded) }
         var showCheck by rememberSaveable { mutableStateOf(false) }
+        var page by rememberSaveable { mutableStateOf<Page?>(null) }
         var sheetTx by remember { mutableStateOf<Tx?>(null) }
         var sheetKind by remember { mutableIntStateOf(0) }
         var showSheet by remember { mutableStateOf(false) }
@@ -65,16 +66,27 @@ fun MalinoRoot(vm: MainVm = viewModel()) {
             ) { t ->
                 when (t) {
                     Tab.Home -> HomeScreen(s, hidden, vm::toggleHide, !perms.ok, goInbox = { tab = Tab.Inbox }, goMore = { tab = Tab.More },
-                        goTx = { tab = Tab.Tx }, goReports = { tab = Tab.Reports }, onAdd = ::add)
+                        goTx = { tab = Tab.Tx }, goReports = { tab = Tab.Reports }, onAdd = ::add, onPage = { page = it })
                     Tab.Inbox -> InboxScreen(s, vm)
                     Tab.Tx -> TxScreen(s, onEdit = { sheetTx = it; showSheet = true })
                     Tab.Reports -> ReportsScreen(s, Modifier.statusBarsPadding())
-                    Tab.More -> MoreScreen(s, vm, perms, onOpenCheck = { showCheck = true }, onEditCard = { editCard = it; showCard = true }, modifier = Modifier.statusBarsPadding())
+                    Tab.More -> MoreScreen(s, vm, perms, onOpenCheck = { showCheck = true }, onPage = { page = it }, onEditCard = { editCard = it; showCard = true }, modifier = Modifier.statusBarsPadding())
                 }
             }
             FloatingNav(tab, s.inbox.size + s.gaps.size, onTab = { tab = it }, onAdd = { add(0) }, modifier = Modifier.align(Alignment.BottomCenter))
         }
 
+        AnimatedVisibility(page != null, enter = slideInVertically(spring(0.9f, Spring.StiffnessMediumLow)) { it / 3 } + fadeIn(), exit = slideOutVertically { it / 3 } + fadeOut()) {
+            BackHandler { page = null }
+            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).systemBarsPadding()) {
+                when (page) {
+                    Page.Budgets -> BudgetsPage(s, vm, onClose = { page = null })
+                    Page.Debts -> DebtsPage(s, vm, onClose = { page = null })
+                    Page.Assets -> AssetsPage(s, vm, onClose = { page = null })
+                    null -> {}
+                }
+            }
+        }
         AnimatedVisibility(showCheck, enter = slideInVertically(spring(0.9f, Spring.StiffnessMediumLow)) { it / 3 } + fadeIn(), exit = slideOutVertically { it / 3 } + fadeOut()) {
             BackHandler { showCheck = false }
             Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).systemBarsPadding()) {

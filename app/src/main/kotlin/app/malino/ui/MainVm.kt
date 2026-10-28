@@ -31,12 +31,38 @@ data class UiState(
     val monthOut: Long = 0,
     val coreCards: List<Card> = emptyList(),
     val coreTxs: List<Tx> = emptyList(),
+    val balances: Map<String, Long> = emptyMap(),
+    val budgets: List<Budget> = emptyList(),
+    val budgetStatus: List<Insights.BudgetStatus> = emptyList(),
+    val monthSpend: Map<String, Long> = emptyMap(),
+    val debts: List<Debt> = emptyList(),
+    val dueSoon: List<Insights.Due> = emptyList(),
+    val goals: List<Goal> = emptyList(),
+    val goalProgress: Map<String, Insights.GoalProgress> = emptyMap(),
+    val assets: List<Asset> = emptyList(),
+    val prices: Prices = Prices(),
+    val assetsValue: Long = 0,
+    val recurring: List<Insights.Recurring> = emptyList(),
+    val forecast: Insights.Forecast? = null,
+    val suspicious: List<TxUi> = emptyList(),
 )
+
+data class PlanData(val budgets: List<Budget>, val debts: List<Debt>, val goals: List<Goal>, val assets: List<Asset>, val prices: Prices)
 
 class MainVm(app: Application) : AndroidViewModel(app) {
     private val repo = (app as MalinoApp).repo
 
-    val state: StateFlow<UiState> = combine(repo.cards, repo.txs, repo.categories, repo.attention) { cardsE, txsE, cats, attention ->
+    private val planFlow = combine(repo.budgets, repo.debts, repo.goals, repo.assets, repo.prices, ::PlanData)
+
+    val state: StateFlow<UiState> = combine(combine(repo.cards, repo.txs, repo.categories, repo.attention) { a, b, c, d -> listOf(a, b, c, d) }, planFlow) { four, plan ->
+        @Suppress("UNCHECKED_CAST")
+        val cardsE = four[0] as List<app.malino.data.CardE>
+        @Suppress("UNCHECKED_CAST")
+        val txsE = four[1] as List<app.malino.data.TxE>
+        @Suppress("UNCHECKED_CAST")
+        val cats = four[2] as List<CategoryE>
+        @Suppress("UNCHECKED_CAST")
+        val attention = four[3] as List<RawE>
         val cards = cardsE.map { it.toCore() }
         val txs = txsE.map { it.toCore() }
         val res = Ledger.compute(cards, txs)
@@ -52,6 +78,11 @@ class MainVm(app: Application) : AndroidViewModel(app) {
             }
             TxUi(t, byCard[t.cardId], t.categoryId?.let { catName[it] }, t.id in res.before, res.after[t.id])
         }.sortedWith(compareByDescending<TxUi> { it.tx.at }.thenByDescending { it.tx.createdAt })
+        val nowMs = System.currentTimeMillis()
+        val today = Jalali.today(nowMs)
+        val spend = Insights.spendByCategory(txs, cards, today.y, today.m)
+        val recurring = Insights.detectRecurring(txs, nowMs)
+        val sus = Insights.suspicious(txs, cards, nowMs).map { it.txId }.toSet()
         UiState(
             loaded = true,
             cards = cards.map { CardUi(it, res.current[it.id] ?: it.openingBalance) },
@@ -61,7 +92,13 @@ class MainVm(app: Application) : AndroidViewModel(app) {
             gaps = res.gaps.map { GapUi(it, byCard[it.cardId]?.name.orEmpty()) },
             attention = attention,
             categories = cats,
-            monthIn = mIn, monthOut = mOut, coreCards = cards, coreTxs = txs,
+            monthIn = mIn, monthOut = mOut, coreCards = cards, coreTxs = txs, balances = res.current,
+            budgets = plan.budgets, budgetStatus = Insights.budgetStatus(plan.budgets, spend), monthSpend = spend,
+            debts = plan.debts, dueSoon = Insights.dueInstallments(plan.debts, nowMs, 7),
+            goals = plan.goals, goalProgress = plan.goals.associate { it.id to Insights.goalProgress(it, cards, res.current, plan.assets, plan.prices, txs, nowMs) },
+            assets = plan.assets, prices = plan.prices, assetsValue = plan.assets.sumOf { Insights.assetValue(it, plan.prices) ?: 0L },
+            recurring = recurring, forecast = if (recurring.isEmpty()) null else Insights.forecastNextMonth(recurring, nowMs),
+            suspicious = ui.filter { it.tx.id in sus },
         )
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState())
 
@@ -120,6 +157,12 @@ class MainVm(app: Application) : AndroidViewModel(app) {
             } finally { importing.value = -1 }
         }
     }
+
+    fun saveBudgets(l: List<Budget>) = io { repo.saveBudgets(l) }
+    fun saveDebts(l: List<Debt>) = io { repo.saveDebts(l) }
+    fun saveGoals(l: List<Goal>) = io { repo.saveGoals(l) }
+    fun saveAssets(l: List<Asset>) = io { repo.saveAssets(l) }
+    fun savePrices(p: Prices) = io { repo.savePrices(p) }
 
     fun newId() = UUID.randomUUID().toString()
 }

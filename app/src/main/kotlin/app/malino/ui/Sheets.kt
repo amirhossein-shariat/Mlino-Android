@@ -31,7 +31,7 @@ import app.malino.core.*
 
 private val KINDS = listOf("هزینه", "درآمد", "کارمزد")
 
-private fun digits(s: String) = Jalali.toEn(s).filter { it.isDigit() }
+private fun digits(s: String) = digitsOnly(s)
 
 /** Add / edit a transaction: big amount, numeric keypad, icon categories. [tx] == null means a new one; [kind0] 0=expense 1=income 2=fee. */
 @OptIn(ExperimentalMaterial3Api::class)

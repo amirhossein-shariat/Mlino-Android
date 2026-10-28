@@ -24,3 +24,8 @@ fun dayLabel(ms: Long, now: Long = System.currentTimeMillis()): String {
 }
 
 fun fullDate(ms: Long): String = Jalali.fromMillis(ms).date.let { Jalali.format(it) }
+
+/** Latin digits only (accepts Persian/Arabic digits typed by the user). */
+fun digitsOnly(s: String) = Jalali.toEn(s).filter { it.isDigit() }
+
+fun newId() = java.util.UUID.randomUUID().toString()

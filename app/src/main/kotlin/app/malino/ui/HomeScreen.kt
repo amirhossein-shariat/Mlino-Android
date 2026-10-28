@@ -8,6 +8,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -51,7 +52,7 @@ private fun todayText(): String {
 @Composable
 fun HomeScreen(
     s: UiState, hidden: Boolean, onToggleHide: () -> Unit, needsSetup: Boolean,
-    goInbox: () -> Unit, goMore: () -> Unit, goTx: () -> Unit, goReports: () -> Unit, onAdd: (Int) -> Unit,
+    goInbox: () -> Unit, goMore: () -> Unit, goTx: () -> Unit, goReports: () -> Unit, onAdd: (Int) -> Unit, onPage: (Page) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val hour = remember { Jalali.fromMillis(System.currentTimeMillis()).h }
@@ -73,11 +74,33 @@ fun HomeScreen(
         item { Hero(s, hidden, onToggleHide, Modifier.enter(1)) }
         if (needsSetup) item { AlertCard("برای ثبت خودکار تراکنش‌ها، دسترسی پیامک و اعلان را فعال کنید", "فعال‌سازی", goMore, Modifier.enter(2)) }
         if (pending > 0) item { PendingBanner(pending, goInbox, Modifier.enter(2)) }
+        if (s.dueSoon.isNotEmpty()) item { AlertCard("${fa(s.dueSoon.size)} قسط یا پرداخت نزدیک یا عقب‌افتاده است", "مشاهده", { onPage(Page.Debts) }, Modifier.enter(2)) }
+        val tight = s.budgetStatus.count { it.level != app.malino.core.Insights.Level.OK }
+        if (tight > 0) item { AlertCard("${fa(tight)} بودجه به سقف نزدیک یا از آن رد شده", "مشاهده", { onPage(Page.Budgets) }, Modifier.enter(2)) }
+        if (s.suspicious.isNotEmpty()) item { AlertCard("${fa(s.suspicious.size)} برداشت غیرعادی در ۷ روز اخیر", "بررسی", goTx, Modifier.enter(2)) }
         item {
             Row(Modifier.enter(3), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Quick("هزینه", Icons.Rounded.ArrowUpward, extra.expenseBg, extra.expense, Modifier.weight(1f)) { onAdd(0) }
                 Quick("درآمد", Icons.Rounded.ArrowDownward, extra.incomeBg, extra.income, Modifier.weight(1f)) { onAdd(1) }
                 Quick("گزارش", Icons.Rounded.BarChart, MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.primary, Modifier.weight(1f), goReports)
+            }
+        }
+        if (s.assets.isNotEmpty() || s.goals.isNotEmpty()) item {
+            Surface2(Modifier.enter(4).clickable { onPage(if (s.goals.isNotEmpty()) Page.Budgets else Page.Assets) }) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (s.assets.isNotEmpty()) {
+                        Text("ثروت کل (کارت‌ها + دارایی‌ها)", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (hidden) Text("••••••••", style = MaterialTheme.typography.titleMedium) else AnimatedMoney(s.total + s.assetsValue, MaterialTheme.typography.titleMedium)
+                    }
+                    s.goals.take(2).forEach { g ->
+                        val p = s.goalProgress[g.id]
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(g.name, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                            Text(fa(((p?.pct ?: 0.0) * 100).toInt()) + "٪", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        ShareBar((p?.pct ?: 0.0).toFloat(), extra.accent)
+                    }
+                }
             }
         }
         item { SectionTitle("کارت‌ها", Modifier.enter(4)) }

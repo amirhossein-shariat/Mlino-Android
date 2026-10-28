@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 import app.malino.core.Card
 
 @Composable
-fun MoreScreen(s: UiState, vm: MainVm, perms: Perms, onOpenCheck: () -> Unit, onEditCard: (Card?) -> Unit, modifier: Modifier = Modifier) {
+fun MoreScreen(s: UiState, vm: MainVm, perms: Perms, onOpenCheck: () -> Unit, onPage: (Page) -> Unit, onEditCard: (Card?) -> Unit, modifier: Modifier = Modifier) {
     val ctx = LocalContext.current
     val importing by vm.importing.collectAsState()
     val imported by vm.importedCount.collectAsState()
@@ -32,6 +32,15 @@ fun MoreScreen(s: UiState, vm: MainVm, perms: Perms, onOpenCheck: () -> Unit, on
                     if (perms.ok) "دسترسی‌ها فعال است. برای دیدن شمارنده‌ها و تست پیام وارد شوید." else "دسترسی‌ها کامل نیست. اینجا فعالشان کنید.",
                     ok = if (perms.ok) true else false, action = "تنظیم", onClick = onOpenCheck,
                 )
+            }
+        }
+
+        item { SectionTitle("برنامه‌ریزی", Modifier.enter(2)) }
+        item {
+            Surface2(Modifier.enter(2)) {
+                CheckRow("بودجه و هدف", "سقف ماهانه‌ی دسته‌ها، هدف پس‌انداز، هزینه‌های تکراری", null) { onPage(Page.Budgets) }
+                CheckRow("طلب و بدهی", "اقساط و سررسیدها با یادآوری", null) { onPage(Page.Debts) }
+                CheckRow("دارایی‌ها", "طلا، دلار، سکه و ثروت کل", null) { onPage(Page.Assets) }
             }
         }
 

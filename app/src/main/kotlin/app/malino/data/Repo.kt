@@ -8,6 +8,18 @@ import java.util.UUID
 
 class Repo(ctx: Context) {
     val db = Db.create(ctx)
+    val plan = PlanStore(ctx)
+    val budgets = kotlinx.coroutines.flow.MutableStateFlow(plan.budgets())
+    val debts = kotlinx.coroutines.flow.MutableStateFlow(plan.debts())
+    val goals = kotlinx.coroutines.flow.MutableStateFlow(plan.goals())
+    val assets = kotlinx.coroutines.flow.MutableStateFlow(plan.assets())
+    val prices = kotlinx.coroutines.flow.MutableStateFlow(plan.prices())
+
+    fun saveBudgets(l: List<app.malino.core.Budget>) { plan.saveBudgets(l); budgets.value = l }
+    fun saveDebts(l: List<app.malino.core.Debt>) { plan.saveDebts(l); debts.value = l }
+    fun saveGoals(l: List<app.malino.core.Goal>) { plan.saveGoals(l); goals.value = l }
+    fun saveAssets(l: List<app.malino.core.Asset>) { plan.saveAssets(l); assets.value = l }
+    fun savePrices(p: app.malino.core.Prices) { plan.savePrices(p); prices.value = p }
     private val prefs = ctx.getSharedPreferences("malino", Context.MODE_PRIVATE)
     val stats = app.malino.capture.CaptureStats(ctx)
 
