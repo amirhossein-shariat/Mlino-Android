@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "app.mlino"
+    namespace = "app.malino"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "app.mlino"
+        applicationId = "app.malino"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
@@ -20,12 +20,12 @@ android {
 
     signingConfigs {
         create("release") {
-            val ks = System.getenv("MLINO_KEYSTORE")
+            val ks = System.getenv("MALINO_KEYSTORE")
             if (ks != null) {
                 storeFile = file(ks)
-                storePassword = System.getenv("MLINO_KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("MLINO_KEY_ALIAS")
-                keyPassword = System.getenv("MLINO_KEY_PASSWORD")
+                storePassword = System.getenv("MALINO_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("MALINO_KEY_ALIAS")
+                keyPassword = System.getenv("MALINO_KEY_PASSWORD")
             }
         }
     }
@@ -35,7 +35,7 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            if (System.getenv("MLINO_KEYSTORE") != null) signingConfig = signingConfigs.getByName("release")
+            if (System.getenv("MALINO_KEYSTORE") != null) signingConfig = signingConfigs.getByName("release")
         }
     }
 

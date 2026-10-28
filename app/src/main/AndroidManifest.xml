@@ -8,14 +8,14 @@
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
 
     <application
-        android:name=".MlinoApp"
+        android:name=".MalinoApp"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Mlino">
+        android:theme="@style/Theme.Malino">
 
         <activity
             android:name=".MainActivity"

@@ -12,5 +12,7 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "Mlino"
-include(":core", ":app")
+rootProject.name = "Malino"
+include(":core")
+// The Android module needs the SDK (present on CI and on a dev machine, absent in the cloud sandbox).
+if (System.getenv("ANDROID_HOME") != null || System.getenv("ANDROID_SDK_ROOT") != null || file("local.properties").exists()) include(":app")

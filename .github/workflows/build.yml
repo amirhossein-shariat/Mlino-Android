@@ -32,7 +32,7 @@ jobs:
           cat core.log app.log 2>/dev/null | grep -E -A4 '^e: |What went wrong' | grep -v 'AndroidX dependencies' | grep -v 'debugRuntimeClasspath' | head -50
       - uses: actions/upload-artifact@v4
         with:
-          name: mlino-debug-apk
+          name: malino-debug-apk
           path: app/build/outputs/apk/debug/*.apk
       - uses: actions/upload-artifact@v4
         if: failure()
