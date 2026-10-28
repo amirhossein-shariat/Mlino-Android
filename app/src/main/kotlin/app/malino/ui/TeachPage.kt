@@ -71,7 +71,7 @@ fun TeachPage(raw: RawE, s: UiState, vm: MainVm, onClose: () -> Unit, modifier: 
                         val inLine = toks.filter { it.start >= lineStart && it.end <= lineEnd }
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                             var cursor = lineStart
-                            fun words(seg: String) = seg.split(' ').filter { it.isNotBlank() }.forEach { Text(it, style = MaterialTheme.typography.bodyMedium) }
+                            @Composable fun words(seg: String) { seg.split(' ').filter { it.isNotBlank() }.forEach { Text(it, style = MaterialTheme.typography.bodyMedium) } }
                             inLine.forEach { tk ->
                                 words(text.substring(cursor, tk.start))
                                 val picked = picks.entries.firstOrNull { it.value == tk.ordinal }?.key

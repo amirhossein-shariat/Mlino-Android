@@ -128,6 +128,7 @@ fun CaptureCheckScreen(s: UiState, vm: MainVm, onClose: () -> Unit, modifier: Mo
     val hasKey = s.cards.any { it.card.smsKey.isNotBlank() }
     val allOk = perms.ok && hasKey && snap.listenerConnected
 
+    val taught by vm.templates.collectAsState()
     LazyColumn(modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 40.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -207,7 +208,6 @@ fun CaptureCheckScreen(s: UiState, vm: MainVm, onClose: () -> Unit, modifier: Mo
             }
         }
 
-        val taught by vm.templates.collectAsState()
         if (taught.isNotEmpty()) {
             item { SectionTitle("قالب‌هایی که یاد داده‌اید") }
             item {
