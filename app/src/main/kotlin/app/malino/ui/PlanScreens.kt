@@ -24,7 +24,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import app.malino.core.*
 
-enum class Page { Budgets, Debts, Assets }
+enum class Page { Budgets, Debts, Assets, Security, Data }
 
 @Composable
 private fun PageHeader(title: String, onClose: () -> Unit) {

@@ -104,6 +104,38 @@ class MainVm(app: Application) : AndroidViewModel(app) {
 
     val recentRaw: StateFlow<List<RawE>> = repo.recentRaw.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val stats get() = repo.stats
+    val security get() = repo.security
+    val lockEnabled = MutableStateFlow(repo.security.enabled)
+    fun refreshLock() { lockEnabled.value = repo.security.enabled }
+
+    /** Result text of the last backup / restore / export, shown on the data page. */
+    val dataMsg = MutableStateFlow<String?>(null)
+    val restoreStaged = MutableStateFlow(false)
+
+    fun backupTo(ctx: Context, uri: android.net.Uri) = io {
+        dataMsg.value = runCatching {
+            ctx.contentResolver.openOutputStream(uri)!!.use { app.malino.data.Backup.write(ctx, repo, it) }
+            "پشتیبان ذخیره شد."
+        }.getOrElse { "ذخیره‌ی پشتیبان ناموفق بود." }
+    }
+
+    fun restoreFrom(ctx: Context, input: () -> java.io.InputStream?) = io {
+        val r = runCatching { input()!!.use { app.malino.data.Backup.stageRestore(ctx, it) } }.getOrElse { app.malino.data.Backup.Staged.Fail("خواندن فایل ممکن نشد") }
+        when (r) {
+            is app.malino.data.Backup.Staged.Ok -> { restoreStaged.value = true; dataMsg.value = "فایل معتبر است. برای اعمال، برنامه را ببندید و دوباره باز کنید." }
+            is app.malino.data.Backup.Staged.Fail -> dataMsg.value = r.why
+        }
+    }
+
+    fun exportXlsx(ctx: Context, uri: android.net.Uri, from: Long, to: Long) = io {
+        dataMsg.value = runCatching {
+            val st = state.value
+            val after = st.txs.mapNotNull { u -> u.after?.let { u.tx.id to it } }.toMap()
+            val bytes = Export.transactions(st.coreCards, st.coreTxs, after, st.categories.associate { it.id to it.name }, from, to)
+            ctx.contentResolver.openOutputStream(uri)!!.use { it.write(bytes) }
+            "فایل اکسل ذخیره شد."
+        }.getOrElse { "ساخت فایل اکسل ناموفق بود." }
+    }
     val hideBalance = MutableStateFlow(repo.hideBalance)
     fun toggleHide() { hideBalance.value = !hideBalance.value; repo.hideBalance = hideBalance.value }
     var onboarded: Boolean

@@ -1,6 +1,7 @@
 package app.malino
 
 import android.app.Application
+import app.malino.data.Backup
 import app.malino.data.Repo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -14,7 +15,9 @@ class MalinoApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        Backup.applyPending(this)
         repo = Repo(this)
         appScope.launch { repo.seedCategories() }
+        appScope.launch(kotlinx.coroutines.Dispatchers.IO) { Backup.autoIfDue(this@MalinoApp, repo) }
     }
 }

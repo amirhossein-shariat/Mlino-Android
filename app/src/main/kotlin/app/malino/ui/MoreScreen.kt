@@ -44,6 +44,14 @@ fun MoreScreen(s: UiState, vm: MainVm, perms: Perms, onOpenCheck: () -> Unit, on
             }
         }
 
+        item { SectionTitle("امنیت و داده", Modifier.enter(2)) }
+        item {
+            Surface2(Modifier.enter(2)) {
+                CheckRow("امنیت و قفل", "پین، اثر انگشت، قفل خودکار", null) { onPage(Page.Security) }
+                CheckRow("پشتیبان و خروجی", "پشتیبان‌گیری، بازیابی، خروجی اکسل", null) { onPage(Page.Data) }
+            }
+        }
+
         item { SectionTitle("کارت‌ها", Modifier.enter(2)) }
         item {
             Surface2(Modifier.enter(2)) {

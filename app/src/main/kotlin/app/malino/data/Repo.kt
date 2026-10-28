@@ -22,6 +22,7 @@ class Repo(ctx: Context) {
     fun savePrices(p: app.malino.core.Prices) { plan.savePrices(p); prices.value = p }
     private val prefs = ctx.getSharedPreferences("malino", Context.MODE_PRIVATE)
     val stats = app.malino.capture.CaptureStats(ctx)
+    val security = app.malino.security.SecurityStore(ctx)
 
     val cards: Flow<List<CardE>> = db.cards().observe()
     val txs: Flow<List<TxE>> = db.tx().observe()

@@ -14,6 +14,7 @@ abstract class Db : RoomDatabase() {
     abstract fun rules(): RuleDao
 
     companion object {
+        const val VERSION = 1
         fun create(ctx: Context): Db = Room.databaseBuilder(ctx, Db::class.java, "malino.db").build()
     }
 }

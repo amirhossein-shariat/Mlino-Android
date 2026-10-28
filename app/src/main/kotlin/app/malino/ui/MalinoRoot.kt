@@ -48,6 +48,19 @@ fun MalinoRoot(vm: MainVm = viewModel()) {
         var onboarded by remember { mutableStateOf(vm.onboarded) }
         var showCheck by rememberSaveable { mutableStateOf(false) }
         var page by rememberSaveable { mutableStateOf<Page?>(null) }
+        val lockOn by vm.lockEnabled.collectAsStateWithLifecycle()
+        var locked by rememberSaveable { mutableStateOf(vm.security.enabled) }
+        var stoppedAt by remember { mutableLongStateOf(0L) }
+        LifecycleEventEffect(Lifecycle.Event.ON_STOP) { stoppedAt = System.currentTimeMillis() }
+        LifecycleEventEffect(Lifecycle.Event.ON_START) {
+            if (vm.security.enabled && stoppedAt > 0 && System.currentTimeMillis() - stoppedAt >= vm.security.autoLockSec * 1000L) locked = true
+        }
+        LaunchedEffect(lockOn) {
+            ctx.findActivity()?.window?.let { w ->
+                if (lockOn) w.setFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE, android.view.WindowManager.LayoutParams.FLAG_SECURE)
+                else w.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+            }
+        }
         var sheetTx by remember { mutableStateOf<Tx?>(null) }
         var sheetKind by remember { mutableIntStateOf(0) }
         var showSheet by remember { mutableStateOf(false) }
@@ -83,6 +96,8 @@ fun MalinoRoot(vm: MainVm = viewModel()) {
                     Page.Budgets -> BudgetsPage(s, vm, onClose = { page = null })
                     Page.Debts -> DebtsPage(s, vm, onClose = { page = null })
                     Page.Assets -> AssetsPage(s, vm, onClose = { page = null })
+                    Page.Security -> SecurityPage(vm, onClose = { page = null })
+                    Page.Data -> DataPage(s, vm, onClose = { page = null })
                     null -> {}
                 }
             }
@@ -97,6 +112,11 @@ fun MalinoRoot(vm: MainVm = viewModel()) {
             Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
                 OnboardingScreen(vm, onDone = { onboarded = true }, onCheck = { onboarded = true; showCheck = true })
             }
+        }
+
+        AnimatedVisibility(locked && lockOn, exit = fadeOut(tween(250))) {
+            BackHandler { }
+            LockScreen(vm, onUnlocked = { locked = false })
         }
 
         if (showSheet) TxSheet(s, sheetTx, sheetKind, vm::newId, vm::saveTx, vm::deleteTx) { showSheet = false }
