@@ -18,6 +18,23 @@ class IngestTest {
         assertEquals(TxStatus.INBOX, t.status); assertEquals("p1", t.cardId)
     }
 
+    @Test fun bluNotificationFindsTheBluCardEvenWithAWrongKey() {
+        val msg = "بلو\nبرداشت پول\nعلی عزیز، 260,000ریال از حساب شما پرید.\nموجودی: 537,950,039 ریال\n7:35\n۱۴۰۵.۰۸.۰۴"
+        val wrongKey = Card("b2", "روزمره", bank = "blu", smsKey = "6118280053795973")
+        val r = Ingest.process(RawMsg("notif", "blu", "", msg, recv), listOf(parsianCard, wrongKey), emptyList(), ::id) as IngestResult.Created
+        assertEquals("b2", r.txs.single().cardId)
+        // two Blu-looking cards: ambiguous, so it stays unmapped unless a key says which one
+        val two = listOf(wrongKey, Card("b3", "بلو دوم", bank = "blu"))
+        assertIs<IngestResult.Unmapped>(Ingest.process(RawMsg("notif", "blu", "", msg, recv), two, emptyList(), ::id))
+        val keyed = listOf(wrongKey, Card("b3", "بلو دوم", bank = "blu", smsKey = "x, BLU"))
+        assertEquals("b3", (Ingest.process(RawMsg("notif", "blu", "", msg, recv), keyed, emptyList(), ::id) as IngestResult.Created).txs.single().cardId)
+    }
+
+    @Test fun keysMayHaveSeveralValuesAndSpaces() {
+        val c = Card("p1", "daily", smsKey = "9999, 1234 5678 9012 34")
+        assertEquals("p1", Ingest.matchCard(listOf(c), Parsed("parsian", "12345678901234", true, 1, 1, 1))?.id)
+    }
+
     @Test fun duplicateIsDropped() {
         val t = (Ingest.process(sms(out), listOf(parsianCard), emptyList(), ::id) as IngestResult.Created).txs.single()
         assertEquals(IngestResult.Duplicate, Ingest.process(sms(out), listOf(parsianCard), listOf(t), ::id))

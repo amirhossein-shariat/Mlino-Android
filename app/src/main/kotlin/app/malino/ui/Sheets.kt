@@ -179,8 +179,8 @@ fun CardDialog(card: Card?, newId: () -> String, onSave: (Card) -> Unit, onDelet
                 OutlinedTextField(purpose, { purpose = it }, label = { Text("کاربرد (مثلاً پس‌انداز)") }, singleLine = true)
                 OutlinedTextField(last4, { last4 = digits(it).take(4) }, label = { Text("چهار رقم آخر کارت") }, singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-                OutlinedTextField(key, { key = Jalali.toEn(it).trim() }, label = { Text("شناسه‌ی پیام (شماره حساب داخل پیامک، یا blu)") }, supportingText = {
-                    Text("پیامک پارسیان: شماره‌ی بالای پیام. اعلان بلو: blu")
+                OutlinedTextField(key, { key = Jalali.toEn(it).trim() }, label = { Text("شناسه‌ی پیام") }, supportingText = {
+                    Text("پیامک پارسیان: شماره‌ی حساب بالای پیامک. اعلان بلو: لازم نیست؛ اگر بانک یا نام کارت «بلو» باشد خودکار وصل می‌شود. چند شناسه را با ویرگول جدا کنید.")
                 })
                 OutlinedTextField(opening, { opening = digits(it).take(14) }, label = { Text("موجودی اولیه (ریال)") }, singleLine = true,
                     visualTransformation = ThousandsTransformation, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
